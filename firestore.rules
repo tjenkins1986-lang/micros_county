@@ -1,12 +1,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Only signed-in coaches/managers (accounts you create manually in the
-    // Firebase console) can read or write contact records. There is no
-    // public sign-up, so this keeps children's and parents' details private
-    // to people you've explicitly given a login.
+    // Only the club admin account below can read or write contact records.
+    // Add more emails to the list as you bring on other coaches/managers.
+    function isAllowedUser() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() in [
+          'thomas.jenkins1986@gmail.com'
+        ];
+    }
+
     match /contacts/{contactId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAllowedUser();
     }
 
     // Deny everything else by default.
