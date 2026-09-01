@@ -188,10 +188,17 @@
     padding:14px 16px 12px;
     transition:border-left-color .15s ease;
   }
-  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;}
+  .card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+  .card-heading{min-width:0;}
   .card-name{font-family:'Oswald',sans-serif;text-wrap:balance;font-weight:600;font-size:16px;line-height:1.25;letter-spacing:.01em;}
   .card-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
-  .card-badges{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+  .card-hint{font-size:10.5px;color:var(--muted);margin-top:8px;font-style:italic;cursor:pointer;user-select:none;}
+  .card-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;cursor:pointer;user-select:none;}
+  .card-chevron{width:16px;height:16px;color:var(--muted);flex-shrink:0;transition:transform .18s ease;}
+  .card.expanded .card-chevron{transform:rotate(180deg);}
+
+  .card-body{margin-top:10px;padding-top:10px;border-top:1px solid var(--panel-line);}
+  .card-body[hidden]{display:none;}
 
   .badge{
     font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
@@ -200,6 +207,7 @@
   }
   .badge.yes{background:var(--good-dim);color:var(--good);}
   .badge.no{background:var(--danger-dim);color:var(--danger);}
+  .badge.unknown{background:var(--panel-2);color:var(--muted);}
 
   .card-contact{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 4px;font-size:12.5px;color:var(--text);}
   .card-contact a{color:var(--text);text-decoration:none;border-bottom:1px dashed var(--panel-line);}
@@ -314,6 +322,15 @@
   }
   .switch input:checked + .track{background:var(--good-dim);border-color:var(--good);}
   .switch input:checked + .track + .thumb{transform:translateX(18px);background:var(--good);}
+
+  .radio-group{display:flex;gap:8px;}
+  .radio-option{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:9px 10px;background:var(--panel);border:1px solid var(--panel-line);border-radius:10px;
+    font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;
+  }
+  .radio-option input{accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;}
+  .radio-option:has(input:checked){border-color:var(--accent);color:var(--text);background:var(--accent-dim);}
 
   .form-actions{display:flex;gap:8px;margin-top:18px;}
   .btn-secondary{
@@ -477,6 +494,7 @@
   var viewsEl = document.getElementById("views");
   var searchTerm = "";
   var activeFilter = "all"; // all | detailsPending | notSignedUp | kitPending
+  var expandedCards = {};
 
   function escapeHtml(s){
     return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
@@ -495,6 +513,12 @@
     if (filter === "notSignedUp") return !item.signedUp;
     if (filter === "kitPending") return !!item.kitSize && !item.kitDateOrdered;
     return true;
+  }
+
+  function socialBadge(item){
+    if (item.socialMediaPermission === "yes") return '<span class="badge yes">Social Media: Yes</span>';
+    if (item.socialMediaPermission === "no") return '<span class="badge no">Social Media: No</span>';
+    return '<span class="badge unknown">Social Media: Not Set</span>';
   }
 
   function formatDate(iso){
@@ -544,20 +568,30 @@
       if (item.kitSize) chips += '<span class="chip"><b>Kit Size</b>' + escapeHtml(item.kitSize) + '</span>';
       if (item.kitDateOrdered) chips += '<span class="chip"><b>Kit Ordered</b>' + escapeHtml(formatDate(item.kitDateOrdered)) + '</span>';
 
-      return '<div class="card">' +
-        '<div class="card-top">' +
-          '<div><div class="card-name">' + escapeHtml(item.childName) + '</div><div class="card-sub">Parent/Guardian: ' + escapeHtml(item.parentName) + '</div></div>' +
-          '<div class="card-badges">' +
-            '<span class="badge ' + (item.detailsSent ? 'yes">Details Sent' : 'no">Details Not Sent') + '</span>' +
-            '<span class="badge ' + (item.signedUp ? 'yes">Signed Up' : 'no">Not Signed Up') + '</span>' +
+      var isExpanded = !!expandedCards[item.id];
+
+      return '<div class="card' + (isExpanded ? ' expanded' : '') + '">' +
+        '<div class="card-top" data-toggle="' + item.id + '">' +
+          '<div class="card-heading">' +
+            '<div class="card-name">' + escapeHtml(item.childName) + '</div>' +
+            '<div class="card-sub">Parent/Guardian: ' + escapeHtml(item.parentName) + '</div>' +
           '</div>' +
+          '<svg class="card-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
         '</div>' +
-        '<div class="card-contact">' + contactHtml + '</div>' +
-        (chips ? '<div class="card-meta">' + chips + '</div>' : '') +
-        (item.comments ? '<div class="card-notes">' + escapeHtml(item.comments) + '</div>' : '') +
-        '<div class="card-actions">' +
-          '<button class="icon-btn" data-edit="' + item.id + '">Edit</button>' +
-          '<button class="icon-btn danger" data-delete="' + item.id + '">Delete</button>' +
+        '<div class="card-badges" data-toggle="' + item.id + '">' +
+          '<span class="badge ' + (item.detailsSent ? 'yes">Details Sent' : 'no">Details Not Sent') + '</span>' +
+          '<span class="badge ' + (item.signedUp ? 'yes">Signed Up' : 'no">Not Signed Up') + '</span>' +
+          socialBadge(item) +
+        '</div>' +
+        '<div class="card-hint" data-toggle="' + item.id + '">Double-tap for details, edit &amp; delete</div>' +
+        '<div class="card-body"' + (isExpanded ? '' : ' hidden') + '>' +
+          '<div class="card-contact">' + contactHtml + '</div>' +
+          (chips ? '<div class="card-meta">' + chips + '</div>' : '') +
+          (item.comments ? '<div class="card-notes">' + escapeHtml(item.comments) + '</div>' : '') +
+          '<div class="card-actions">' +
+            '<button class="icon-btn" data-edit="' + item.id + '">Edit</button>' +
+            '<button class="icon-btn danger" data-delete="' + item.id + '">Delete</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
     }).join("");
@@ -602,6 +636,15 @@
     '</div>';
   }
 
+  function radioGroupHtml(key, label, value){
+    var options = [{ v: "yes", l: "Yes" }, { v: "no", l: "No" }];
+    var optionsHtml = options.map(function(o){
+      var checked = value === o.v ? " checked" : "";
+      return '<label class="radio-option"><input type="radio" name="' + key + '" value="' + o.v + '"' + checked + ' required>' + o.l + '</label>';
+    }).join("");
+    return '<div class="field"><label>' + label + '</label><div class="radio-group">' + optionsHtml + '</div></div>';
+  }
+
   function openForm(id){
     var item = id ? Store.get(id) : null;
     modalTitle.textContent = item ? "Edit Player" : "Add Player";
@@ -611,10 +654,11 @@
     var toggles =
       toggleHtml("detailsSent", "New Member Details Sent", "Welcome pack / info emailed to parent", item ? !!item.detailsSent : false) +
       toggleHtml("signedUp", "Signed Up", "Registered as a club member", item ? !!item.signedUp : false);
+    var socialField = radioGroupHtml("socialMediaPermission", "Social Media Permission", item ? item.socialMediaPermission : "");
     var kitFields = '<div class="field-row">' + fieldHtml(FIELDS[4], item ? item.kitSize : "") + fieldHtml(FIELDS[5], item ? item.kitDateOrdered : "") + '</div>';
     var commentsField = fieldHtml(FIELDS[6], item ? item.comments : "");
 
-    modalForm.innerHTML = nameFields + contactFields + toggles + kitFields + commentsField +
+    modalForm.innerHTML = nameFields + contactFields + toggles + socialField + kitFields + commentsField +
       '<div class="form-actions">' +
         '<button type="button" class="btn-secondary" id="cancel-btn">Cancel</button>' +
         '<button type="submit" class="btn-submit">' + (item ? "Save Changes" : "Add Player") + '</button>' +
@@ -627,6 +671,8 @@
       FIELDS.forEach(function(f){ data[f.key] = modalForm.querySelector('[name="' + f.key + '"]').value.trim(); });
       data.detailsSent = modalForm.querySelector('[name="detailsSent"]').checked;
       data.signedUp = modalForm.querySelector('[name="signedUp"]').checked;
+      var socialInput = modalForm.querySelector('[name="socialMediaPermission"]:checked');
+      data.socialMediaPermission = socialInput ? socialInput.value : "";
       if (!data.childName || !data.parentName){ return; }
       var savePromise = item ? Store.update(item.id, data) : Store.add(data);
       savePromise.catch(function(err){ alert("Couldn't save: " + err.message); });
@@ -659,6 +705,14 @@
       render();
       return;
     }
+  });
+
+  viewsEl.addEventListener("dblclick", function(e){
+    var toggle = e.target.closest("[data-toggle]");
+    if (!toggle) return;
+    var id = toggle.getAttribute("data-toggle");
+    if (expandedCards[id]) delete expandedCards[id]; else expandedCards[id] = true;
+    render();
   });
 
   viewsEl.addEventListener("input", function(e){
