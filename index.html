@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stirling County RFC – Micro Rugby Contacts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0A;
+    --bg2:#141414;
+    --panel:#1B1B1B;
+    --panel-2:#232323;
+    --panel-line:#333333;
+    --text:#F5F5F0;
+    --muted:#9A9A94;
+    --accent:#C8102E;
+    --accent-ink:#FFFFFF;
+    --accent-dim:rgba(200,16,46,.18);
+    --gold:#C9A227;
+    --gold-dim:rgba(201,162,39,.16);
+    --good:#4C9A5B;
+    --good-dim:rgba(76,154,91,.16);
+    --danger:#C1552E;
+    --danger-dim:rgba(193,85,46,.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:'Public Sans',system-ui,sans-serif;overscroll-behavior:none;}
+  #app{display:flex;flex-direction:column;min-height:100dvh;}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+  }
+
+  /* Setup screen */
+  .setup-screen{
+    position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;
+    padding:24px;z-index:200;
+  }
+  .setup-screen[hidden]{display:none;}
+  .setup-card{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--panel-line);border-top:3px solid var(--accent);border-radius:16px;padding:28px 26px;}
+  .setup-card h1{font-family:'Oswald',sans-serif;font-size:20px;font-weight:600;margin:0 0 10px;color:var(--accent);}
+  .setup-card p{font-size:13.5px;line-height:1.6;color:var(--muted);margin:0 0 12px;}
+  .setup-card code{background:var(--panel-2);border:1px solid var(--panel-line);padding:2px 6px;border-radius:5px;font-size:12.5px;color:var(--text);}
+  .setup-card ol{margin:0 0 12px;padding-left:20px;color:var(--muted);font-size:13.5px;line-height:1.7;}
+
+  /* Login */
+  .login-screen{
+    position:fixed;inset:0;
+    background:radial-gradient(circle at 50% 0%, #1c0a0d 0%, var(--bg) 60%);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    z-index:100;
+  }
+  .login-screen[hidden]{display:none;}
+  .login-card{
+    width:100%;max-width:360px;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:16px;
+    padding:30px 24px;
+  }
+  .crest{
+    width:64px;height:64px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 16px;
+  }
+  .crest svg{width:64px;height:64px;}
+  .login-card h1{font-family:'Oswald',sans-serif;text-align:center;text-wrap:balance;font-size:19px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin:0 0 4px;}
+  .login-card .accent{color:var(--accent);}
+  .login-card p{margin:0 0 22px;font-size:12.5px;color:var(--muted);text-align:center;}
+  .login-error{
+    background:var(--danger-dim);color:var(--danger);
+    font-size:12.5px;padding:8px 10px;border-radius:8px;margin-bottom:14px;
+    line-height:1.4;
+  }
+  .login-error[hidden]{display:none;}
+
+  .sync-error{
+    background:var(--danger-dim);color:var(--danger);
+    font-size:12.5px;padding:10px 16px;
+    border-bottom:1px solid rgba(193,85,46,.35);
+  }
+  .sync-error[hidden]{display:none;}
+
+  header{
+    padding:18px 18px 14px;
+    background:linear-gradient(180deg,var(--bg2),var(--bg));
+    border-bottom:3px solid var(--accent);
+    flex-shrink:0;
+  }
+  .header-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .header-title{display:flex;align-items:center;gap:12px;min-width:0;}
+  .crest-sm{width:38px;height:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .crest-sm svg{width:38px;height:38px;}
+  header h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:18px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin:0 0 2px;
+    text-wrap:balance;
+  }
+  header h1 .accent{color:var(--accent);}
+  header p{margin:0;font-size:12px;color:var(--muted);}
+
+  .btn-signout{
+    flex-shrink:0;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    color:var(--muted);
+    border-radius:8px;
+    padding:7px 11px;
+    font-family:'Public Sans',system-ui,sans-serif;
+    font-size:11.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn-signout:active{border-color:var(--accent);color:var(--accent);}
+
+  main{flex:1;padding:16px 16px 40px;max-width:960px;margin:0 auto;width:100%;}
+
+  .toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .search{
+    flex:1;min-width:160px;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:10px;
+    padding:9px 12px;
+    color:var(--text);
+    font-family:'Public Sans',system-ui,sans-serif;
+    font-size:13.5px;
+  }
+  .search::placeholder{color:var(--muted);}
+  .search:focus{outline:none;border-color:var(--accent);}
+
+  .btn-primary{
+    background:var(--accent);
+    color:var(--accent-ink);
+    border:none;
+    border-radius:10px;
+    padding:9px 14px;
+    font-family:'Public Sans',system-ui,sans-serif;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .btn-primary:active{opacity:.85;}
+
+  .filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .filter-chip{
+    flex-shrink:0;
+    padding:7px 14px;
+    border-radius:20px;
+    border:1px solid var(--panel-line);
+    background:var(--panel);
+    color:var(--muted);
+    font-family:'Public Sans',system-ui,sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .filter-chip.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+
+  .stats{display:flex;gap:14px;flex-wrap:wrap;margin:0 2px 14px;font-size:11.5px;color:var(--muted);letter-spacing:.02em;}
+  .stats b{color:var(--text);font-weight:700;}
+  .stats .pill{background:var(--panel);border:1px solid var(--panel-line);padding:4px 10px;border-radius:8px;}
+  .stats .pill.warn{color:var(--danger);border-color:rgba(193,85,46,.4);}
+  .stats .pill.ok{color:var(--good);border-color:rgba(76,154,91,.4);}
+
+  .list{display:flex;flex-direction:column;gap:10px;}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-left:3px solid var(--panel-line);
+    border-radius:14px;
+    padding:14px 16px 12px;
+    transition:border-left-color .15s ease;
+  }
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;}
+  .card-name{font-family:'Oswald',sans-serif;text-wrap:balance;font-weight:600;font-size:16px;line-height:1.25;letter-spacing:.01em;}
+  .card-sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .card-badges{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+
+  .badge{
+    font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+    padding:3px 8px;border-radius:8px;
+    white-space:nowrap;
+  }
+  .badge.yes{background:var(--good-dim);color:var(--good);}
+  .badge.no{background:var(--danger-dim);color:var(--danger);}
+
+  .card-contact{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 4px;font-size:12.5px;color:var(--text);}
+  .card-contact a{color:var(--text);text-decoration:none;border-bottom:1px dashed var(--panel-line);}
+  .card-contact a:active{color:var(--accent);}
+  .card-contact .none{color:var(--muted);font-style:italic;}
+
+  .card-meta{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px;}
+  .chip{
+    font-size:11.5px;
+    color:var(--text);
+    background:var(--panel-2);
+    border:1px solid var(--panel-line);
+    padding:4px 9px;
+    border-radius:8px;
+  }
+  .chip b{color:var(--gold);font-weight:600;margin-right:4px;}
+
+  .card-notes{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4;white-space:pre-wrap;}
+
+  .card-actions{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--panel-line);}
+  .icon-btn{
+    flex:1;
+    background:var(--panel-2);
+    border:1px solid var(--panel-line);
+    color:var(--muted);
+    border-radius:8px;
+    padding:7px 8px;
+    font-family:'Public Sans',system-ui,sans-serif;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .icon-btn:active{border-color:var(--accent);color:var(--accent);}
+  .icon-btn.danger:active{border-color:var(--danger);color:var(--danger);}
+
+  .empty{
+    text-align:center;
+    padding:46px 20px;
+    color:var(--muted);
+    font-size:13.5px;
+    border:1px dashed var(--panel-line);
+    border-radius:14px;
+  }
+  .empty b{display:block;color:var(--text);font-family:'Oswald',sans-serif;text-wrap:balance;font-size:16px;font-weight:600;margin-bottom:4px;}
+
+  /* Modal */
+  .modal-backdrop{
+    position:fixed;inset:0;
+    background:rgba(8,8,8,.72);
+    display:flex;align-items:flex-end;justify-content:center;
+    z-index:50;
+  }
+  .modal-backdrop[hidden]{display:none;}
+  .modal{
+    background:var(--bg2);
+    border:1px solid var(--panel-line);
+    border-top:3px solid var(--accent);
+    border-radius:18px 18px 0 0;
+    width:100%;max-width:520px;
+    max-height:90dvh;
+    overflow-y:auto;
+    padding:18px 18px 24px;
+    animation:slideup .2s ease;
+  }
+  @media (min-width:560px){
+    .modal-backdrop{align-items:center;}
+    .modal{border-radius:18px;margin:20px;}
+  }
+  @keyframes slideup{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .modal-header h2{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.02em;text-wrap:balance;font-size:17px;font-weight:600;margin:0;}
+  .modal-close{
+    background:var(--panel);border:1px solid var(--panel-line);color:var(--muted);
+    width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .field input,.field select,.field textarea{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:10px;
+    padding:10px 12px;
+    color:var(--text);
+    font-family:'Public Sans',system-ui,sans-serif;
+    font-size:14px;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+
+  .toggle-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--panel);border:1px solid var(--panel-line);border-radius:10px;
+    padding:10px 12px;margin-bottom:12px;
+  }
+  .toggle-row .toggle-label{font-size:13.5px;font-weight:600;}
+  .toggle-row .toggle-hint{font-size:11px;color:var(--muted);margin-top:2px;}
+  .switch{position:relative;width:44px;height:26px;flex-shrink:0;}
+  .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;}
+  .switch .track{
+    position:absolute;inset:0;background:var(--panel-2);border:1px solid var(--panel-line);border-radius:20px;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .switch .thumb{
+    position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+    background:var(--muted);transition:transform .15s ease, background .15s ease;
+  }
+  .switch input:checked + .track{background:var(--good-dim);border-color:var(--good);}
+  .switch input:checked + .track + .thumb{transform:translateX(18px);background:var(--good);}
+
+  .form-actions{display:flex;gap:8px;margin-top:18px;}
+  .btn-secondary{
+    flex:1;background:var(--panel);border:1px solid var(--panel-line);color:var(--text);
+    border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:'Public Sans',system-ui,sans-serif;
+  }
+  .btn-submit{
+    flex:2;background:var(--accent);border:none;color:var(--accent-ink);
+    border-radius:10px;padding:11px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:'Public Sans',system-ui,sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<div id="setup-screen" class="setup-screen" hidden>
+  <div class="setup-card">
+    <h1>Firebase setup needed</h1>
+    <p>This app needs a Firebase project before it can run. In <code>index.html</code>, find the <code>firebaseConfig</code> object near the bottom of the file and replace the placeholder values with your own project's config.</p>
+    <ol>
+      <li>Create a project at <code>console.firebase.google.com</code>.</li>
+      <li>Add a Web App to the project and copy the generated config object.</li>
+      <li>Enable <b>Firestore Database</b> (production mode).</li>
+      <li>Enable <b>Authentication → Sign-in method → Email/Password</b>.</li>
+      <li>In Authentication → Users, manually add an account for each coach/manager who needs access &mdash; there is no public sign-up.</li>
+      <li>Publish the Firestore rules from <code>firestore.rules</code> in this repo (Firestore → Rules tab).</li>
+    </ol>
+    <p>See <code>README.md</code> in this repo for the full walkthrough.</p>
+  </div>
+</div>
+
+<div id="login-screen" class="login-screen">
+  <form id="login-form" class="login-card">
+    <div class="crest">
+      <svg viewBox="0 0 64 72" aria-hidden="true">
+        <path d="M32 2 L60 12 L60 34 C60 54 48 66 32 70 C16 66 4 54 4 34 L4 12 Z" fill="#0A0A0A" stroke="#C8102E" stroke-width="3"/>
+        <path d="M32 8 L54 16 L54 34 C54 50 44 60 32 64 C20 60 10 50 10 34 L10 16 Z" fill="#0A0A0A" stroke="#C9A227" stroke-width="1.5"/>
+        <rect x="16" y="26" width="9" height="9" fill="#C9A227"/>
+        <rect x="27.5" y="22" width="9" height="13" fill="#C9A227"/>
+        <rect x="39" y="26" width="9" height="9" fill="#C9A227"/>
+        <path d="M14 40 Q32 30 50 40 L46 52 Q32 44 18 52 Z" fill="#C8102E"/>
+      </svg>
+    </div>
+    <h1>Stirling County <span class="accent">RFC</span></h1>
+    <p>Sign in to manage Micro Rugby player &amp; parent details.</p>
+    <div class="login-error" id="login-error" hidden></div>
+    <div class="field"><label>Email</label><input type="email" id="login-email" required autocomplete="username"></div>
+    <div class="field"><label>Password</label><input type="password" id="login-password" required autocomplete="current-password"></div>
+    <button type="submit" class="btn-submit" style="width:100%">Sign In</button>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <div class="sync-error" id="sync-error" hidden></div>
+  <header>
+    <div class="header-row">
+      <div class="header-title">
+        <div class="crest-sm">
+          <svg viewBox="0 0 64 72" aria-hidden="true">
+            <path d="M32 2 L60 12 L60 34 C60 54 48 66 32 70 C16 66 4 54 4 34 L4 12 Z" fill="#0A0A0A" stroke="#C8102E" stroke-width="3"/>
+            <path d="M32 8 L54 16 L54 34 C54 50 44 60 32 64 C20 60 10 50 10 34 L10 16 Z" fill="#0A0A0A" stroke="#C9A227" stroke-width="1.5"/>
+            <rect x="16" y="26" width="9" height="9" fill="#C9A227"/>
+            <rect x="27.5" y="22" width="9" height="13" fill="#C9A227"/>
+            <rect x="39" y="26" width="9" height="9" fill="#C9A227"/>
+            <path d="M14 40 Q32 30 50 40 L46 52 Q32 44 18 52 Z" fill="#C8102E"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Stirling County <span class="accent">Micro Rugby</span></h1>
+          <p>Players, parents, sign-up &amp; kit tracking.</p>
+        </div>
+      </div>
+      <button class="btn-signout" id="signout-btn" type="button">Sign Out</button>
+    </div>
+  </header>
+
+  <main id="views"></main>
+
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">Add Player</h2>
+        <button class="modal-close" id="modal-close" type="button">&times;</button>
+      </div>
+      <form id="modal-form"></form>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  /* ---------------------------------------------------------------
+     Replace with your own Firebase project's web config.
+     See README.md for step-by-step setup instructions.
+  ----------------------------------------------------------------*/
+  var firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  var setupScreen = document.getElementById("setup-screen");
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf("YOUR_") === 0){
+    setupScreen.hidden = false;
+    throw new Error("Firebase is not configured yet — see setup instructions.");
+  }
+
+  var fbApp = initializeApp(firebaseConfig);
+  var auth = getAuth(fbApp);
+  var fdb = getFirestore(fbApp);
+
+  /* ---------------- Data layer (Firestore) ---------------- */
+  var COLLECTION = "contacts";
+  var cache = [];
+  var unsubscribe = null;
+
+  var syncErrorEl = document.getElementById("sync-error");
+  function showSyncError(msg){ syncErrorEl.textContent = msg; syncErrorEl.hidden = false; }
+  function clearSyncError(){ syncErrorEl.hidden = true; }
+
+  function startSync(){
+    unsubscribe = onSnapshot(collection(fdb, COLLECTION), function(snap){
+      cache = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+      clearSyncError();
+      render();
+    }, function(err){
+      showSyncError("Couldn't sync contacts: " + err.message);
+    });
+  }
+
+  function stopSync(){
+    if (unsubscribe){ unsubscribe(); unsubscribe = null; }
+    cache = [];
+  }
+
+  var Store = {
+    list: function(){ return cache.slice(); },
+    get: function(id){ return cache.find(function(x){ return x.id === id; }) || null; },
+    add: function(obj){
+      return addDoc(collection(fdb, COLLECTION), Object.assign({}, obj, { createdAt: Date.now() }));
+    },
+    update: function(id, patch){
+      return updateDoc(doc(fdb, COLLECTION, id), patch);
+    },
+    remove: function(id){
+      return deleteDoc(doc(fdb, COLLECTION, id));
+    }
+  };
+
+  /* ---------------- Field config ---------------- */
+  var FIELDS = [
+    { key: "childName", label: "Child's Name", type: "text", required: true, placeholder: "e.g. Jamie Smith" },
+    { key: "parentName", label: "Parent / Guardian Name(s)", type: "text", required: true, placeholder: "e.g. Alex Smith" },
+    { key: "email", label: "Email", type: "email", placeholder: "e.g. alex@example.com" },
+    { key: "phone", label: "Phone Number", type: "tel", placeholder: "e.g. 07700 900000" },
+    { key: "kitSize", label: "Kit Size", type: "text", placeholder: "e.g. Age 9-10 / Small" },
+    { key: "kitDateOrdered", label: "Kit Date Ordered", type: "date" },
+    { key: "comments", label: "Comments", type: "textarea", placeholder: "Allergies, availability, anything else worth noting…" }
+  ];
+
+  /* ---------------- Rendering ---------------- */
+  var viewsEl = document.getElementById("views");
+  var searchTerm = "";
+  var activeFilter = "all"; // all | detailsPending | notSignedUp | kitPending
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function matchesSearch(item, term){
+    if (!term) return true;
+    var hay = (item.childName + " " + item.parentName + " " + (item.email||"") + " " + (item.phone||"")).toLowerCase();
+    return hay.indexOf(term.toLowerCase()) !== -1;
+  }
+
+  function matchesFilter(item, filter){
+    if (filter === "detailsPending") return !item.detailsSent;
+    if (filter === "notSignedUp") return !item.signedUp;
+    if (filter === "kitPending") return !!item.kitSize && !item.kitDateOrdered;
+    return true;
+  }
+
+  function formatDate(iso){
+    if (!iso) return "";
+    var d = new Date(iso + "T00:00:00");
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function renderList(){
+    var all = Store.list();
+    var items = all.filter(function(i){ return matchesSearch(i, searchTerm) && matchesFilter(i, activeFilter); });
+    items.sort(function(a,b){ return (a.childName||"").localeCompare(b.childName||""); });
+
+    var total = all.length;
+    var signedUpCount = all.filter(function(i){ return i.signedUp; }).length;
+    var detailsSentCount = all.filter(function(i){ return i.detailsSent; }).length;
+
+    var statsHtml = total === 0 ? "" :
+      '<div class="stats">' +
+        '<span class="pill"><b>' + total + '</b> ' + (total === 1 ? "player" : "players") + '</span>' +
+        '<span class="pill ok"><b>' + signedUpCount + '</b> signed up</span>' +
+        '<span class="pill' + ((total - detailsSentCount) ? ' warn' : ' ok') + '"><b>' + detailsSentCount + '</b> sent details</span>' +
+      '</div>';
+
+    var filtersHtml = '<div class="filters">' +
+      ['all','detailsPending','notSignedUp','kitPending'].map(function(f){
+        var labels = { all: "All", detailsPending: "Details Not Sent", notSignedUp: "Not Signed Up", kitPending: "Kit Not Ordered" };
+        return '<button class="filter-chip' + (activeFilter === f ? ' active' : '') + '" data-filter="' + f + '">' + labels[f] + '</button>';
+      }).join("") +
+    '</div>';
+
+    if (total === 0){
+      return statsHtml + filtersHtml + '<div class="empty"><b>No players yet</b>Add your first player to get started.</div>';
+    }
+    if (items.length === 0){
+      return statsHtml + filtersHtml + '<div class="empty"><b>No matches</b>Try a different search or filter.</div>';
+    }
+
+    var cards = items.map(function(item){
+      var contactBits = [];
+      if (item.email) contactBits.push('<a href="mailto:' + escapeHtml(item.email) + '">' + escapeHtml(item.email) + '</a>');
+      if (item.phone) contactBits.push('<a href="tel:' + escapeHtml(item.phone) + '">' + escapeHtml(item.phone) + '</a>');
+      var contactHtml = contactBits.length ? contactBits.join(" &middot; ") : '<span class="none">No contact details on file</span>';
+
+      var chips = "";
+      if (item.kitSize) chips += '<span class="chip"><b>Kit Size</b>' + escapeHtml(item.kitSize) + '</span>';
+      if (item.kitDateOrdered) chips += '<span class="chip"><b>Kit Ordered</b>' + escapeHtml(formatDate(item.kitDateOrdered)) + '</span>';
+
+      return '<div class="card">' +
+        '<div class="card-top">' +
+          '<div><div class="card-name">' + escapeHtml(item.childName) + '</div><div class="card-sub">Parent/Guardian: ' + escapeHtml(item.parentName) + '</div></div>' +
+          '<div class="card-badges">' +
+            '<span class="badge ' + (item.detailsSent ? 'yes">Details Sent' : 'no">Details Not Sent') + '</span>' +
+            '<span class="badge ' + (item.signedUp ? 'yes">Signed Up' : 'no">Not Signed Up') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card-contact">' + contactHtml + '</div>' +
+        (chips ? '<div class="card-meta">' + chips + '</div>' : '') +
+        (item.comments ? '<div class="card-notes">' + escapeHtml(item.comments) + '</div>' : '') +
+        '<div class="card-actions">' +
+          '<button class="icon-btn" data-edit="' + item.id + '">Edit</button>' +
+          '<button class="icon-btn danger" data-delete="' + item.id + '">Delete</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+
+    return statsHtml + filtersHtml + '<div class="list results">' + cards + '</div>';
+  }
+
+  function renderView(){
+    var toolbar = '<div class="toolbar">' +
+      '<input class="search" type="search" placeholder="Search by player, parent, email or phone&hellip;" data-search value="' + escapeHtml(searchTerm) + '">' +
+      '<button class="btn-primary" data-add>+ Add Player</button>' +
+    '</div>';
+    return toolbar + renderList();
+  }
+
+  function render(){
+    viewsEl.innerHTML = renderView();
+  }
+
+  /* ---------------- Modal ---------------- */
+  var backdrop = document.getElementById("modal-backdrop");
+  var modalTitle = document.getElementById("modal-title");
+  var modalForm = document.getElementById("modal-form");
+
+  function closeModal(){ backdrop.hidden = true; modalForm.innerHTML = ""; }
+  document.getElementById("modal-close").addEventListener("click", closeModal);
+  backdrop.addEventListener("click", function(e){ if (e.target === backdrop) closeModal(); });
+
+  function fieldHtml(f, value){
+    var v = value == null ? "" : value;
+    var req = f.required ? "required" : "";
+    if (f.type === "textarea"){
+      return '<div class="field"><label>' + f.label + '</label><textarea name="' + f.key + '" placeholder="' + escapeHtml(f.placeholder||"") + '" ' + req + '>' + escapeHtml(v) + '</textarea></div>';
+    }
+    return '<div class="field"><label>' + f.label + '</label><input type="' + f.type + '" name="' + f.key + '" value="' + escapeHtml(v) + '" placeholder="' + escapeHtml(f.placeholder||"") + '" ' + req + '></div>';
+  }
+
+  function toggleHtml(key, label, hint, checked){
+    return '<div class="toggle-row">' +
+      '<div><div class="toggle-label">' + label + '</div><div class="toggle-hint">' + hint + '</div></div>' +
+      '<label class="switch"><input type="checkbox" name="' + key + '"' + (checked ? " checked" : "") + '><span class="track"></span><span class="thumb"></span></label>' +
+    '</div>';
+  }
+
+  function openForm(id){
+    var item = id ? Store.get(id) : null;
+    modalTitle.textContent = item ? "Edit Player" : "Add Player";
+
+    var nameFields = fieldHtml(FIELDS[0], item ? item.childName : "") + fieldHtml(FIELDS[1], item ? item.parentName : "");
+    var contactFields = '<div class="field-row">' + fieldHtml(FIELDS[2], item ? item.email : "") + fieldHtml(FIELDS[3], item ? item.phone : "") + '</div>';
+    var toggles =
+      toggleHtml("detailsSent", "New Member Details Sent", "Welcome pack / info emailed to parent", item ? !!item.detailsSent : false) +
+      toggleHtml("signedUp", "Signed Up", "Registered as a club member", item ? !!item.signedUp : false);
+    var kitFields = '<div class="field-row">' + fieldHtml(FIELDS[4], item ? item.kitSize : "") + fieldHtml(FIELDS[5], item ? item.kitDateOrdered : "") + '</div>';
+    var commentsField = fieldHtml(FIELDS[6], item ? item.comments : "");
+
+    modalForm.innerHTML = nameFields + contactFields + toggles + kitFields + commentsField +
+      '<div class="form-actions">' +
+        '<button type="button" class="btn-secondary" id="cancel-btn">Cancel</button>' +
+        '<button type="submit" class="btn-submit">' + (item ? "Save Changes" : "Add Player") + '</button>' +
+      '</div>';
+
+    modalForm.querySelector("#cancel-btn").addEventListener("click", closeModal);
+    modalForm.onsubmit = function(e){
+      e.preventDefault();
+      var data = {};
+      FIELDS.forEach(function(f){ data[f.key] = modalForm.querySelector('[name="' + f.key + '"]').value.trim(); });
+      data.detailsSent = modalForm.querySelector('[name="detailsSent"]').checked;
+      data.signedUp = modalForm.querySelector('[name="signedUp"]').checked;
+      if (!data.childName || !data.parentName){ return; }
+      var savePromise = item ? Store.update(item.id, data) : Store.add(data);
+      savePromise.catch(function(err){ alert("Couldn't save: " + err.message); });
+      closeModal();
+    };
+    backdrop.hidden = false;
+  }
+
+  /* ---------------- Delegated events ---------------- */
+  viewsEl.addEventListener("click", function(e){
+    if (e.target.closest("[data-add]")){ openForm(null); return; }
+
+    var editBtn = e.target.closest("[data-edit]");
+    if (editBtn){ openForm(editBtn.getAttribute("data-edit")); return; }
+
+    var delBtn = e.target.closest("[data-delete]");
+    if (delBtn){
+      var id = delBtn.getAttribute("data-delete");
+      var item = Store.get(id);
+      var label = item ? item.childName : "this player";
+      if (confirm('Delete "' + label + '"? This can\'t be undone.')){
+        Store.remove(id).catch(function(err){ alert("Couldn't delete: " + err.message); });
+      }
+      return;
+    }
+
+    var filterBtn = e.target.closest("[data-filter]");
+    if (filterBtn){
+      activeFilter = filterBtn.getAttribute("data-filter");
+      render();
+      return;
+    }
+  });
+
+  viewsEl.addEventListener("input", function(e){
+    if (!e.target.hasAttribute("data-search")) return;
+    searchTerm = e.target.value;
+    var cursor = e.target.selectionStart;
+    render();
+    var searchEl = viewsEl.querySelector("[data-search]");
+    if (searchEl){ searchEl.focus(); searchEl.setSelectionRange(cursor, cursor); }
+  });
+
+  /* ---------------- Auth ---------------- */
+  var loginScreen = document.getElementById("login-screen");
+  var loginForm = document.getElementById("login-form");
+  var loginError = document.getElementById("login-error");
+  var appEl = document.getElementById("app");
+  var signoutBtn = document.getElementById("signout-btn");
+
+  loginForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    loginError.hidden = true;
+    var email = document.getElementById("login-email").value.trim();
+    var password = document.getElementById("login-password").value;
+    signInWithEmailAndPassword(auth, email, password).catch(function(err){
+      loginError.textContent = "Sign in failed: " + err.message;
+      loginError.hidden = false;
+    });
+  });
+
+  signoutBtn.addEventListener("click", function(){
+    signOut(auth);
+  });
+
+  onAuthStateChanged(auth, function(user){
+    if (user){
+      loginScreen.hidden = true;
+      appEl.hidden = false;
+      loginForm.reset();
+      startSync();
+      render();
+    } else {
+      stopSync();
+      appEl.hidden = true;
+      loginScreen.hidden = false;
+    }
+  });
+</script>
+</body>
+</html>
