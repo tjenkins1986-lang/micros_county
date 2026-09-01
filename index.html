@@ -73,6 +73,18 @@
   }
   .login-error[hidden]{display:none;}
 
+  .login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;}
+  .login-divider::before,.login-divider::after{content:"";flex:1;height:1px;background:var(--panel-line);}
+
+  .btn-google{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+    background:#FFFFFF;border:1px solid var(--panel-line);color:#1F1F1F;
+    border-radius:10px;padding:10px;font-weight:600;font-size:13.5px;cursor:pointer;
+    font-family:'Public Sans',system-ui,sans-serif;
+  }
+  .btn-google svg{width:18px;height:18px;flex-shrink:0;}
+  .btn-google:active{opacity:.85;}
+
   .sync-error{
     background:var(--danger-dim);color:var(--danger);
     font-size:12.5px;padding:10px 16px;
@@ -340,6 +352,16 @@
     <div class="field"><label>Email</label><input type="email" id="login-email" required autocomplete="username"></div>
     <div class="field"><label>Password</label><input type="password" id="login-password" required autocomplete="current-password"></div>
     <button type="submit" class="btn-submit" style="width:100%">Sign In</button>
+    <div class="login-divider"><span>or</span></div>
+    <button type="button" class="btn-google" id="google-signin-btn">
+      <svg viewBox="0 0 18 18" aria-hidden="true">
+        <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.94v2.33A9 9 0 0 0 9 18z"/>
+        <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.94A9 9 0 0 0 0 9c0 1.45.35 2.83.94 4.03z"/>
+        <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .94 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z"/>
+      </svg>
+      Sign in with Google
+    </button>
   </form>
 </div>
 
@@ -373,7 +395,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
-    getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
+    getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
     getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot
@@ -654,6 +676,8 @@
   var loginError = document.getElementById("login-error");
   var appEl = document.getElementById("app");
   var signoutBtn = document.getElementById("signout-btn");
+  var googleSigninBtn = document.getElementById("google-signin-btn");
+  var googleProvider = new GoogleAuthProvider();
 
   loginForm.addEventListener("submit", function(e){
     e.preventDefault();
@@ -662,6 +686,14 @@
     var password = document.getElementById("login-password").value;
     signInWithEmailAndPassword(auth, email, password).catch(function(err){
       loginError.textContent = "Sign in failed: " + err.message;
+      loginError.hidden = false;
+    });
+  });
+
+  googleSigninBtn.addEventListener("click", function(){
+    loginError.hidden = true;
+    signInWithPopup(auth, googleProvider).catch(function(err){
+      loginError.textContent = "Google sign in failed: " + err.message;
       loginError.hidden = false;
     });
   });
