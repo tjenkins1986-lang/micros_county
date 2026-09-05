@@ -511,6 +511,9 @@
   var fdb = getFirestore(fbApp);
 
   /* ---------------- Data layer (Firestore) ---------------- */
+  // When P2/P3/P4 etc. tabs are added, each should use its own COLLECTION
+  // and YEAR_GROUP so exports stay distinguishable and can be combined.
+  var YEAR_GROUP = "P1";
   var COLLECTION = "contacts";
   var cache = [];
   var unsubscribe = null;
@@ -598,9 +601,10 @@
   }
 
   function exportXlsx(){
-    var headers = ["Child's Name", "Parent/Guardian", "Email", "Phone", "New Member Details Sent", "Signed Up", "Social Media Permission", "Kit Size", "Kit Date Ordered", "Comments"];
+    var headers = ["Year Group", "Child's Name", "Parent/Guardian", "Email", "Phone", "New Member Details Sent", "Signed Up", "Social Media Permission", "Kit Size", "Kit Date Ordered", "Comments"];
     var rows = Store.list().slice().sort(function(a, b){ return (a.childName||"").localeCompare(b.childName||""); }).map(function(item){
       return [
+        YEAR_GROUP,
         item.childName || "",
         item.parentName || "",
         item.email || "",
@@ -616,9 +620,9 @@
     var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
     ws["!cols"] = headers.map(function(){ return { wch: 20 }; });
     var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "P1 Contacts");
+    XLSX.utils.book_append_sheet(wb, ws, YEAR_GROUP + " Contacts");
     var today = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, "P1-Micro-Rugby-Contacts-" + today + ".xlsx");
+    XLSX.writeFile(wb, YEAR_GROUP + "-Micro-Rugby-Contacts-" + today + ".xlsx");
   }
 
   function renderList(){
