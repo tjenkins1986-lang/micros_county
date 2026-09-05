@@ -45,7 +45,13 @@ already active.
   Only give logins to people who need access, and remove accounts (in
   Authentication → Users) when someone leaves a coaching/admin role.
 - "Signed Up" and "New Member Details Sent" are simple yes/no toggles in the
-  edit form.
+  edit form; "Social Media Permission" is a required Yes/No radio choice.
+- Tap the **?** button in the header any time for a how-to popup (it also
+  shows automatically the first time someone signs in, tracked via
+  `localStorage` in that browser).
+- The **Export** button downloads every player's details as a `.xlsx`
+  spreadsheet (via the [SheetJS](https://sheetjs.com/) library, loaded from
+  cdnjs), regardless of the current search/filter.
 - Colours (black/red/gold) and the crest are a stylised approximation of
   Stirling County RFC's branding based on screenshots of
   stirlingcounty-rfc.co.uk — this environment couldn't reach that domain

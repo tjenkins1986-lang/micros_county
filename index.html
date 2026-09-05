@@ -112,6 +112,8 @@
   header h1 .accent{color:var(--accent);}
   header p{margin:0;font-size:12px;color:var(--muted);}
 
+  .header-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+
   .btn-signout{
     flex-shrink:0;
     background:var(--panel);
@@ -125,6 +127,25 @@
     cursor:pointer;
   }
   .btn-signout:active{border-color:var(--accent);color:var(--accent);}
+
+  .btn-help{
+    flex-shrink:0;
+    width:30px;height:30px;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    color:var(--muted);
+    border-radius:50%;
+    font-family:'Oswald',sans-serif;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .btn-help:active{border-color:var(--accent);color:var(--accent);}
+
+  .help-content ul{margin:0 0 14px;padding-left:20px;font-size:13.5px;line-height:1.7;color:var(--text);}
+  .help-content li{margin-bottom:6px;}
+  .help-content p{font-size:12.5px;color:var(--muted);margin:0;}
 
   main{flex:1;padding:16px 16px 40px;max-width:960px;margin:0 auto;width:100%;}
 
@@ -155,6 +176,21 @@
     white-space:nowrap;
   }
   .btn-primary:active{opacity:.85;}
+
+  .btn-export{
+    flex-shrink:0;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    color:var(--text);
+    border-radius:10px;
+    padding:9px 14px;
+    font-family:'Public Sans',system-ui,sans-serif;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .btn-export:active{border-color:var(--accent);color:var(--accent);}
 
   .filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
   .filter-chip{
@@ -398,7 +434,10 @@
           <p>Players, parents, sign-up &amp; kit tracking.</p>
         </div>
       </div>
-      <button class="btn-signout" id="signout-btn" type="button">Sign Out</button>
+      <div class="header-actions">
+        <button class="btn-help" id="help-btn" type="button" aria-label="How to use this page">?</button>
+        <button class="btn-signout" id="signout-btn" type="button">Sign Out</button>
+      </div>
     </div>
   </header>
 
@@ -413,8 +452,32 @@
       <form id="modal-form"></form>
     </div>
   </div>
+
+  <div class="modal-backdrop" id="help-modal-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2>How To Use This Page</h2>
+        <button class="modal-close" id="help-modal-close" type="button">&times;</button>
+      </div>
+      <div class="help-content">
+        <ul>
+          <li><b>Add a player</b> &mdash; tap <b>+ Add Player</b> and fill in their details.</li>
+          <li><b>View, edit or delete a player</b> &mdash; double-tap anywhere on their card to expand it, then use Edit or Delete at the bottom.</li>
+          <li><b>Search</b> &mdash; type a player's name, parent's name, email or phone number into the search box.</li>
+          <li><b>Filter</b> &mdash; use the chips (All / Details Not Sent / Not Signed Up / Kit Not Ordered) to quickly find who needs following up.</li>
+          <li><b>Badges</b> &mdash; each card shows at a glance whether new-member details have been sent, whether they've signed up, and their social media permission.</li>
+          <li><b>Export</b> &mdash; tap <b>Export</b> to download every player's details as a spreadsheet you can open in Excel.</li>
+        </ul>
+        <p>This page currently covers <b>Primary 1 (P1)</b> only.</p>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-submit" id="help-modal-got-it" style="flex:1">Got it</button>
+      </div>
+    </div>
+  </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
@@ -534,6 +597,30 @@
     return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   }
 
+  function exportXlsx(){
+    var headers = ["Child's Name", "Parent/Guardian", "Email", "Phone", "New Member Details Sent", "Signed Up", "Social Media Permission", "Kit Size", "Kit Date Ordered", "Comments"];
+    var rows = Store.list().slice().sort(function(a, b){ return (a.childName||"").localeCompare(b.childName||""); }).map(function(item){
+      return [
+        item.childName || "",
+        item.parentName || "",
+        item.email || "",
+        item.phone || "",
+        item.detailsSent ? "Yes" : "No",
+        item.signedUp ? "Yes" : "No",
+        item.socialMediaPermission === "yes" ? "Yes" : (item.socialMediaPermission === "no" ? "No" : ""),
+        item.kitSize || "",
+        item.kitDateOrdered ? formatDate(item.kitDateOrdered) : "",
+        item.comments || ""
+      ];
+    });
+    var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+    ws["!cols"] = headers.map(function(){ return { wch: 20 }; });
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "P1 Contacts");
+    var today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, "P1-Micro-Rugby-Contacts-" + today + ".xlsx");
+  }
+
   function renderList(){
     var all = Store.list();
     var items = all.filter(function(i){ return matchesSearch(i, searchTerm) && matchesFilter(i, activeFilter); });
@@ -607,6 +694,7 @@
   function renderView(){
     var toolbar = '<div class="toolbar">' +
       '<input class="search" type="search" placeholder="Search by player, parent, email or phone&hellip;" data-search value="' + escapeHtml(searchTerm) + '">' +
+      '<button class="btn-export" data-export type="button">Export</button>' +
       '<button class="btn-primary" data-add>+ Add Player</button>' +
     '</div>';
     return toolbar + renderList();
@@ -689,6 +777,7 @@
   /* ---------------- Delegated events ---------------- */
   viewsEl.addEventListener("click", function(e){
     if (e.target.closest("[data-add]")){ openForm(null); return; }
+    if (e.target.closest("[data-export]")){ exportXlsx(); return; }
 
     var editBtn = e.target.closest("[data-edit]");
     if (editBtn){ openForm(editBtn.getAttribute("data-edit")); return; }
@@ -729,6 +818,24 @@
     if (searchEl){ searchEl.focus(); searchEl.setSelectionRange(cursor, cursor); }
   });
 
+  /* ---------------- Help modal ---------------- */
+  var HELP_SEEN_KEY = "microRugbyHelpSeen";
+  var helpBackdrop = document.getElementById("help-modal-backdrop");
+  var helpBtn = document.getElementById("help-btn");
+  var helpModalClose = document.getElementById("help-modal-close");
+  var helpModalGotIt = document.getElementById("help-modal-got-it");
+
+  function openHelp(){ helpBackdrop.hidden = false; }
+  function closeHelp(){
+    helpBackdrop.hidden = true;
+    try { localStorage.setItem(HELP_SEEN_KEY, "1"); } catch (e){}
+  }
+
+  helpBtn.addEventListener("click", openHelp);
+  helpModalClose.addEventListener("click", closeHelp);
+  helpModalGotIt.addEventListener("click", closeHelp);
+  helpBackdrop.addEventListener("click", function(e){ if (e.target === helpBackdrop) closeHelp(); });
+
   /* ---------------- Auth ---------------- */
   var loginScreen = document.getElementById("login-screen");
   var loginForm = document.getElementById("login-form");
@@ -768,6 +875,9 @@
       loginForm.reset();
       startSync();
       render();
+      var seenHelp = false;
+      try { seenHelp = !!localStorage.getItem(HELP_SEEN_KEY); } catch (e){}
+      if (!seenHelp) openHelp();
     } else {
       stopSync();
       appEl.hidden = true;
