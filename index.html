@@ -464,7 +464,7 @@
           <li><b>Add a player</b> &mdash; tap <b>+ Add Player</b> and fill in their details.</li>
           <li><b>View, edit or delete a player</b> &mdash; double-tap anywhere on their card to expand it, then use Edit or Delete at the bottom.</li>
           <li><b>Search</b> &mdash; type a player's name, parent's name, email or phone number into the search box.</li>
-          <li><b>Filter</b> &mdash; use the chips (All / Details Not Sent / Not Signed Up / Kit Not Ordered) to quickly find who needs following up.</li>
+          <li><b>Filter</b> &mdash; use the chips (All / New Member Details Not Sent / Not Signed Up / Kit Not Ordered) to quickly find who needs following up.</li>
           <li><b>Badges</b> &mdash; each card shows at a glance whether new-member details have been sent, whether they've signed up, and their social media permission.</li>
           <li><b>Export</b> &mdash; tap <b>Export</b> to download every player's details as a spreadsheet you can open in Excel.</li>
         </ul>
@@ -638,12 +638,12 @@
       '<div class="stats">' +
         '<span class="pill"><b>' + total + '</b> ' + (total === 1 ? "player" : "players") + '</span>' +
         '<span class="pill ok"><b>' + signedUpCount + '</b> signed up</span>' +
-        '<span class="pill' + ((total - detailsSentCount) ? ' warn' : ' ok') + '"><b>' + detailsSentCount + '</b> sent details</span>' +
+        '<span class="pill' + ((total - detailsSentCount) ? ' warn' : ' ok') + '"><b>' + detailsSentCount + '</b> new member details sent</span>' +
       '</div>';
 
     var filtersHtml = '<div class="filters">' +
       ['all','detailsPending','notSignedUp','kitPending'].map(function(f){
-        var labels = { all: "All", detailsPending: "Details Not Sent", notSignedUp: "Not Signed Up", kitPending: "Kit Not Ordered" };
+        var labels = { all: "All", detailsPending: "New Member Details Not Sent", notSignedUp: "Not Signed Up", kitPending: "Kit Not Ordered" };
         return '<button class="filter-chip' + (activeFilter === f ? ' active' : '') + '" data-filter="' + f + '">' + labels[f] + '</button>';
       }).join("") +
     '</div>';
@@ -676,7 +676,7 @@
           '<div class="card-toggle-icon"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>' +
         '</div>' +
         '<div class="card-badges" data-toggle="' + item.id + '">' +
-          '<span class="badge ' + (item.detailsSent ? 'yes">Details Sent' : 'no">Details Not Sent') + '</span>' +
+          '<span class="badge ' + (item.detailsSent ? 'yes">New Member Details Sent' : 'no">New Member Details Not Sent') + '</span>' +
           '<span class="badge ' + (item.signedUp ? 'yes">Signed Up' : 'no">Not Signed Up') + '</span>' +
           socialBadge(item) +
         '</div>' +
