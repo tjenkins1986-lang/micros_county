@@ -583,7 +583,7 @@
   function matchesFilter(item, filter){
     if (filter === "detailsPending") return !item.detailsSent;
     if (filter === "notSignedUp") return !item.signedUp;
-    if (filter === "kitPending") return !!item.kitSize && !item.kitDateOrdered;
+    if (filter === "kitPending") return !!item.signedUp && !item.kitDateOrdered;
     return true;
   }
 
