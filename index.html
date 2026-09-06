@@ -192,6 +192,11 @@
     white-space:nowrap;
   }
   .btn-primary:active{opacity:.85;}
+  .btn-primary:disabled{background:var(--panel-2);color:var(--muted);cursor:not-allowed;}
+
+  .attendance-toolbar{align-items:center;justify-content:space-between;}
+  .attendance-save-status{font-size:12px;color:var(--muted);}
+  .attendance-save-status.unsaved{color:var(--danger);font-weight:600;}
 
   .btn-export{
     flex-shrink:0;
@@ -520,7 +525,7 @@
           <li><b>Filter</b> &mdash; use the chips (All / New Member Details Not Sent / Not Signed Up / Kit Not Ordered) to quickly find who needs following up.</li>
           <li><b>Badges</b> &mdash; each card shows at a glance whether new-member details have been sent, whether they've signed up, and their social media permission.</li>
           <li><b>Export</b> &mdash; tap <b>Export</b> to download every player's details as a spreadsheet you can open in Excel.</li>
-          <li><b>Attendance</b> &mdash; switch to the <b>Attendance</b> tab to tick off who's at training/matches each Saturday. Tick <b>Cancelled</b> at the top of a date to block out a Saturday (e.g. school holidays) &mdash; that day's boxes are then locked.</li>
+          <li><b>Attendance</b> &mdash; switch to the <b>Attendance</b> tab to tick off who's at training/matches each Saturday. Tick <b>Cancelled</b> at the top of a date to block out a Saturday (e.g. school holidays) &mdash; that day's boxes are then locked. Tick as many boxes as you like, then press <b>Save Attendance</b> to store them &mdash; nothing is saved until you tap Save.</li>
         </ul>
         <p>The dropdown under the title covers <b>Primary 1 (P1)</b> only for now &mdash; P2/P3/P4 will be added later.</p>
       </div>
@@ -538,7 +543,7 @@
     getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot
+    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, writeBatch, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   /* ---------------------------------------------------------------
@@ -630,6 +635,7 @@
   function stopAttendanceSync(){
     if (attendanceUnsubscribe){ attendanceUnsubscribe(); attendanceUnsubscribe = null; }
     attendanceCache = {};
+    attendanceDraft = {};
   }
 
   function pad2(n){ return n < 10 ? "0" + n : "" + n; }
@@ -652,16 +658,45 @@
     get: function(dateStr){
       var rec = attendanceCache[dateStr] || {};
       return { cancelled: !!rec.cancelled, players: rec.players || {} };
-    },
-    setCancelled: function(dateStr, cancelled){
-      return setDoc(doc(fdb, ATTENDANCE_COLLECTION, dateStr), { cancelled: cancelled }, { merge: true });
-    },
-    setPlayerPresent: function(dateStr, playerId, present){
-      var patch = {};
-      patch["players." + playerId] = present;
-      return setDoc(doc(fdb, ATTENDANCE_COLLECTION, dateStr), patch, { merge: true });
     }
   };
+
+  // Local, unsaved edits made on the Attendance tab. Keyed by date, same
+  // shape as AttendanceStore.get(). Checkbox clicks only touch this object;
+  // nothing reaches Firestore until Save Attendance is pressed, so ticking a
+  // run of boxes never races against a network round trip.
+  var attendanceDraft = {};
+
+  function getAttendanceRecord(dateStr){
+    return attendanceDraft[dateStr] || AttendanceStore.get(dateStr);
+  }
+
+  function draftAttendanceRecord(dateStr){
+    if (!attendanceDraft[dateStr]){
+      var att = AttendanceStore.get(dateStr);
+      attendanceDraft[dateStr] = { cancelled: att.cancelled, players: Object.assign({}, att.players) };
+    }
+    return attendanceDraft[dateStr];
+  }
+
+  function saveAttendance(){
+    var dates = Object.keys(attendanceDraft);
+    if (dates.length === 0) return;
+    var saveBtn = viewsEl.querySelector("[data-save-attendance]");
+    if (saveBtn){ saveBtn.disabled = true; saveBtn.textContent = "Saving…"; }
+    var batch = writeBatch(fdb);
+    dates.forEach(function(dateStr){
+      var rec = attendanceDraft[dateStr];
+      batch.set(doc(fdb, ATTENDANCE_COLLECTION, dateStr), { cancelled: rec.cancelled, players: rec.players }, { merge: true });
+    });
+    batch.commit().then(function(){
+      attendanceDraft = {};
+      render();
+    }).catch(function(err){
+      alert("Couldn't save attendance: " + err.message);
+      if (saveBtn){ saveBtn.disabled = false; saveBtn.textContent = "Save Attendance"; }
+    });
+  }
 
   /* ---------------- Field config ---------------- */
   var FIELDS = [
@@ -843,13 +878,21 @@
 
   function renderAttendanceView(){
     var players = Store.list().slice().sort(function(a, b){ return (a.childName||"").localeCompare(b.childName||""); });
+    var hasUnsaved = Object.keys(attendanceDraft).length > 0;
+    var toolbar = '<div class="toolbar attendance-toolbar">' +
+      '<div class="attendance-save-status' + (hasUnsaved ? ' unsaved' : '') + '">' +
+        (hasUnsaved ? "You have unsaved changes" : "All changes saved") +
+      '</div>' +
+      '<button class="btn-primary" data-save-attendance type="button"' + (hasUnsaved ? "" : " disabled") + '>Save Attendance</button>' +
+    '</div>';
+
     if (players.length === 0){
-      return '<div class="empty"><b>No players yet</b>Add players on the Players tab before taking attendance.</div>';
+      return toolbar + '<div class="empty"><b>No players yet</b>Add players on the Players tab before taking attendance.</div>';
     }
 
     var dates = getSaturdays();
     var headerCells = dates.map(function(dateStr){
-      var att = AttendanceStore.get(dateStr);
+      var att = getAttendanceRecord(dateStr);
       return '<th class="attendance-date-col' + (att.cancelled ? ' cancelled' : '') + '">' +
         '<div class="attendance-date-label">' + formatDateShort(dateStr) + '</div>' +
         '<label class="attendance-cancel"><input type="checkbox" data-cancel="' + dateStr + '"' + (att.cancelled ? ' checked' : '') + '> Cancelled</label>' +
@@ -858,7 +901,7 @@
 
     var bodyRows = players.map(function(p){
       var cells = dates.map(function(dateStr){
-        var att = AttendanceStore.get(dateStr);
+        var att = getAttendanceRecord(dateStr);
         var present = !!att.players[p.id];
         return '<td class="attendance-date-col' + (att.cancelled ? ' cancelled' : '') + '">' +
           '<input type="checkbox" class="attend-box" data-attend="' + dateStr + '" data-player="' + p.id + '"' +
@@ -869,13 +912,13 @@
     }).join("");
 
     var totalCells = dates.map(function(dateStr){
-      var att = AttendanceStore.get(dateStr);
-      if (att.cancelled) return '<td class="attendance-date-col cancelled">&mdash;</td>';
+      var att = getAttendanceRecord(dateStr);
+      if (att.cancelled) return '<td class="attendance-date-col cancelled" data-total-date="' + dateStr + '">&mdash;</td>';
       var present = players.filter(function(p){ return !!att.players[p.id]; }).length;
-      return '<td class="attendance-date-col attendance-total">' + present + '</td>';
+      return '<td class="attendance-date-col attendance-total" data-total-date="' + dateStr + '">' + present + '</td>';
     }).join("");
 
-    return '<div class="attendance-wrap"><table class="attendance-table">' +
+    return toolbar + '<div class="attendance-wrap"><table class="attendance-table">' +
       '<thead><tr><th class="attendance-player-col">Player</th>' + headerCells + '</tr></thead>' +
       '<tbody>' + bodyRows + '</tbody>' +
       '<tfoot><tr><td class="attendance-player-col">Total</td>' + totalCells + '</tr></tfoot>' +
@@ -1007,6 +1050,8 @@
       render();
       return;
     }
+
+    if (e.target.closest("[data-save-attendance]")){ saveAttendance(); return; }
   });
 
   viewsEl.addEventListener("dblclick", function(e){
@@ -1030,17 +1075,45 @@
     var cancelInput = e.target.closest("[data-cancel]");
     if (cancelInput){
       var cancelDate = cancelInput.getAttribute("data-cancel");
-      AttendanceStore.setCancelled(cancelDate, cancelInput.checked).catch(function(err){ alert("Couldn't update: " + err.message); });
+      draftAttendanceRecord(cancelDate).cancelled = cancelInput.checked;
+      render();
       return;
     }
     var attendInput = e.target.closest("[data-attend]");
     if (attendInput){
       var attendDate = attendInput.getAttribute("data-attend");
       var playerId = attendInput.getAttribute("data-player");
-      AttendanceStore.setPlayerPresent(attendDate, playerId, attendInput.checked).catch(function(err){ alert("Couldn't update: " + err.message); });
+      draftAttendanceRecord(attendDate).players[playerId] = attendInput.checked;
+      // Deliberately no full render() here: the checkbox already shows its
+      // new state natively, and re-rendering the whole table on every tap
+      // is what caused rapid taps to visually "reset" before. Just keep
+      // the Save button/status text and that date's Total cell in sync
+      // without touching the rest of the table.
+      syncAttendanceToolbar();
+      syncAttendanceTotalCell(attendDate);
       return;
     }
   });
+
+  function syncAttendanceTotalCell(dateStr){
+    var cell = viewsEl.querySelector('[data-total-date="' + dateStr + '"]');
+    if (!cell) return;
+    var att = getAttendanceRecord(dateStr);
+    if (att.cancelled){ cell.textContent = "—"; return; }
+    var present = Store.list().filter(function(p){ return !!att.players[p.id]; }).length;
+    cell.textContent = present;
+  }
+
+  function syncAttendanceToolbar(){
+    var hasUnsaved = Object.keys(attendanceDraft).length > 0;
+    var statusEl = viewsEl.querySelector(".attendance-save-status");
+    var saveBtn = viewsEl.querySelector("[data-save-attendance]");
+    if (statusEl){
+      statusEl.textContent = hasUnsaved ? "You have unsaved changes" : "All changes saved";
+      statusEl.classList.toggle("unsaved", hasUnsaved);
+    }
+    if (saveBtn) saveBtn.disabled = !hasUnsaved;
+  }
 
   /* ---------------- Tabs & year group ---------------- */
   var pageTabs = document.getElementById("page-tabs");

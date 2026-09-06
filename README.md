@@ -67,6 +67,11 @@ already active.
   Firestore collection (one document per date). Tick **Cancelled** at the
   top of a date to block out a whole Saturday (e.g. a school holiday) —
   that column's boxes grey out and lock.
+- Attendance ticks are batched, not saved instantly: ticking boxes only
+  updates the page locally (so ticking a run of boxes never fights a
+  network round trip), and nothing reaches Firestore until **Save
+  Attendance** is pressed. The status text next to that button shows
+  "You have unsaved changes" until you save.
 - Colours (black/red/gold) and the crest are a stylised approximation of
   Stirling County RFC's branding based on screenshots of
   stirlingcounty-rfc.co.uk — this environment couldn't reach that domain
