@@ -195,8 +195,11 @@
   .btn-primary:disabled{background:var(--panel-2);color:var(--muted);cursor:not-allowed;}
 
   .attendance-toolbar{align-items:center;justify-content:space-between;}
+  .attendance-toolbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .attendance-save-status{font-size:12px;color:var(--muted);}
   .attendance-save-status.unsaved{color:var(--danger);font-weight:600;}
+  .attendance-filter-btn{display:inline-flex;align-items:center;gap:5px;}
+  .attendance-filter-btn svg{width:13px;height:13px;flex-shrink:0;}
 
   .btn-export{
     flex-shrink:0;
@@ -525,7 +528,7 @@
           <li><b>Filter</b> &mdash; use the chips (All / New Member Details Not Sent / Not Signed Up / Kit Not Ordered) to quickly find who needs following up.</li>
           <li><b>Badges</b> &mdash; each card shows at a glance whether new-member details have been sent, whether they've signed up, and their social media permission.</li>
           <li><b>Export</b> &mdash; tap <b>Export</b> to download every player's details as a spreadsheet you can open in Excel.</li>
-          <li><b>Attendance</b> &mdash; switch to the <b>Attendance</b> tab to tick off who's at training/matches each Saturday. Tick <b>Cancelled</b> at the top of a date to block out a Saturday (e.g. school holidays) &mdash; that day's boxes are then locked. Tick as many boxes as you like, then press <b>Save Attendance</b> to store them &mdash; nothing is saved until you tap Save.</li>
+          <li><b>Attendance</b> &mdash; switch to the <b>Attendance</b> tab to tick off who's at training/matches each Saturday. Use <b>Signed Up Only</b> to hide players who haven't signed up yet. Tick <b>Cancelled</b> at the top of a date to block out a Saturday (e.g. school holidays) &mdash; that day's boxes are then locked. Tick as many boxes as you like, then press <b>Save Attendance</b> to store them &mdash; nothing is saved until you tap Save.</li>
         </ul>
         <p>The dropdown under the title covers <b>Primary 1 (P1)</b> only for now &mdash; P2/P3/P4 will be added later.</p>
       </div>
@@ -715,6 +718,7 @@
   var searchTerm = "";
   var activeFilter = "all"; // all | detailsPending | notSignedUp | kitPending
   var expandedCards = {};
+  var attendanceSignedUpOnly = false;
 
   function escapeHtml(s){
     return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
@@ -877,17 +881,29 @@
   }
 
   function renderAttendanceView(){
-    var players = Store.list().slice().sort(function(a, b){ return (a.childName||"").localeCompare(b.childName||""); });
+    var allPlayers = Store.list();
+    var players = allPlayers
+      .filter(function(p){ return !attendanceSignedUpOnly || p.signedUp; })
+      .sort(function(a, b){ return (a.childName||"").localeCompare(b.childName||""); });
     var hasUnsaved = Object.keys(attendanceDraft).length > 0;
     var toolbar = '<div class="toolbar attendance-toolbar">' +
-      '<div class="attendance-save-status' + (hasUnsaved ? ' unsaved' : '') + '">' +
-        (hasUnsaved ? "You have unsaved changes" : "All changes saved") +
+      '<div class="attendance-toolbar-left">' +
+        '<button class="filter-chip attendance-filter-btn' + (attendanceSignedUpOnly ? ' active' : '') + '" data-attendance-filter type="button" title="Show signed up players only">' +
+          '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>' +
+          'Signed Up Only' +
+        '</button>' +
+        '<div class="attendance-save-status' + (hasUnsaved ? ' unsaved' : '') + '">' +
+          (hasUnsaved ? "You have unsaved changes" : "All changes saved") +
+        '</div>' +
       '</div>' +
       '<button class="btn-primary" data-save-attendance type="button"' + (hasUnsaved ? "" : " disabled") + '>Save Attendance</button>' +
     '</div>';
 
-    if (players.length === 0){
+    if (allPlayers.length === 0){
       return toolbar + '<div class="empty"><b>No players yet</b>Add players on the Players tab before taking attendance.</div>';
+    }
+    if (players.length === 0){
+      return toolbar + '<div class="empty"><b>No signed up players</b>Turn off "Signed Up Only" to see everyone.</div>';
     }
 
     var dates = getSaturdays();
@@ -1052,6 +1068,12 @@
     }
 
     if (e.target.closest("[data-save-attendance]")){ saveAttendance(); return; }
+
+    if (e.target.closest("[data-attendance-filter]")){
+      attendanceSignedUpOnly = !attendanceSignedUpOnly;
+      render();
+      return;
+    }
   });
 
   viewsEl.addEventListener("dblclick", function(e){
