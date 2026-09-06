@@ -16,6 +16,10 @@ service cloud.firestore {
       allow read, write: if isAllowedUser();
     }
 
+    match /attendance/{dateId} {
+      allow read, write: if isAllowedUser();
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

@@ -110,9 +110,25 @@
     text-wrap:balance;
   }
   header h1 .accent{color:var(--accent);}
-  header p{margin:0;font-size:12px;color:var(--muted);}
+  header p{margin:0 0 8px;font-size:12px;color:var(--muted);}
+
+  .year-group-select{
+    background:var(--panel);border:1px solid var(--panel-line);color:var(--text);
+    border-radius:8px;padding:5px 9px;font-family:'Public Sans',system-ui,sans-serif;
+    font-size:12px;font-weight:600;cursor:pointer;
+  }
+  .year-group-select:focus{outline:none;border-color:var(--accent);}
+  .year-group-select option:disabled{color:#666;}
 
   .header-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+
+  .tabs{display:flex;gap:6px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--panel-line);max-width:960px;margin:0 auto;}
+  .tab{
+    padding:8px 16px;border-radius:20px;border:1px solid var(--panel-line);background:var(--panel);
+    color:var(--muted);font-family:'Public Sans',system-ui,sans-serif;font-size:13px;font-weight:600;
+    cursor:pointer;transition:all .15s ease;
+  }
+  .tab.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
 
   .btn-signout{
     flex-shrink:0;
@@ -295,6 +311,28 @@
   }
   .empty b{display:block;color:var(--text);font-family:'Oswald',sans-serif;text-wrap:balance;font-size:16px;font-weight:600;margin-bottom:4px;}
 
+  /* Attendance */
+  .attendance-wrap{overflow-x:auto;border:1px solid var(--panel-line);border-radius:14px;background:var(--panel);}
+  .attendance-table{border-collapse:collapse;width:100%;font-size:12px;}
+  .attendance-table th,.attendance-table td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--panel-line);white-space:nowrap;}
+  .attendance-table thead th{
+    background:var(--panel-2);font-family:'Oswald',sans-serif;text-transform:uppercase;
+    font-size:10.5px;letter-spacing:.03em;color:var(--muted);font-weight:700;
+  }
+  .attendance-table tbody tr:last-child td{border-bottom:none;}
+  .attendance-player-col{
+    position:sticky;left:0;background:var(--panel);text-align:left;font-weight:600;
+    z-index:1;box-shadow:1px 0 0 var(--panel-line);
+  }
+  .attendance-table thead .attendance-player-col{background:var(--panel-2);z-index:2;}
+  .attendance-date-label{font-weight:700;color:var(--text);margin-bottom:5px;}
+  .attendance-cancel{display:flex;align-items:center;justify-content:center;gap:4px;font-size:9.5px;color:var(--muted);text-transform:none;letter-spacing:0;cursor:pointer;font-weight:600;}
+  .attendance-cancel input{accent-color:var(--danger);width:12px;height:12px;cursor:pointer;}
+  .attendance-date-col.cancelled{background:var(--danger-dim);}
+  .attendance-date-col.cancelled .attendance-date-label{text-decoration:line-through;color:var(--muted);}
+  .attendance-table input[type="checkbox"].attend-box{width:18px;height:18px;accent-color:var(--good);cursor:pointer;}
+  .attendance-table input[type="checkbox"].attend-box:disabled{opacity:.25;cursor:not-allowed;}
+
   /* Modal */
   .modal-backdrop{
     position:fixed;inset:0;
@@ -433,6 +471,12 @@
         <div>
           <h1>Stirling County <span class="accent">Micro Rugby</span></h1>
           <p>Players, parents, sign-up &amp; kit tracking.</p>
+          <select class="year-group-select" id="year-group-select" aria-label="Year group">
+            <option value="P1">P1</option>
+            <option value="P2" disabled>P2 (coming soon)</option>
+            <option value="P3" disabled>P3 (coming soon)</option>
+            <option value="P4" disabled>P4 (coming soon)</option>
+          </select>
         </div>
       </div>
       <div class="header-actions">
@@ -441,6 +485,11 @@
       </div>
     </div>
   </header>
+
+  <nav class="tabs" id="page-tabs">
+    <button class="tab active" data-view="players" type="button">Players</button>
+    <button class="tab" data-view="attendance" type="button">Attendance</button>
+  </nav>
 
   <main id="views"></main>
 
@@ -468,8 +517,9 @@
           <li><b>Filter</b> &mdash; use the chips (All / New Member Details Not Sent / Not Signed Up / Kit Not Ordered) to quickly find who needs following up.</li>
           <li><b>Badges</b> &mdash; each card shows at a glance whether new-member details have been sent, whether they've signed up, and their social media permission.</li>
           <li><b>Export</b> &mdash; tap <b>Export</b> to download every player's details as a spreadsheet you can open in Excel.</li>
+          <li><b>Attendance</b> &mdash; switch to the <b>Attendance</b> tab to tick off who's at training/matches each Saturday. Tick <b>Cancelled</b> at the top of a date to block out a Saturday (e.g. school holidays) &mdash; that day's boxes are then locked.</li>
         </ul>
-        <p>This page currently covers <b>Primary 1 (P1)</b> only.</p>
+        <p>The dropdown under the title covers <b>Primary 1 (P1)</b> only for now &mdash; P2/P3/P4 will be added later.</p>
       </div>
       <div class="form-actions">
         <button type="button" class="btn-submit" id="help-modal-got-it" style="flex:1">Got it</button>
@@ -485,7 +535,7 @@
     getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot
+    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   /* ---------------------------------------------------------------
@@ -552,6 +602,55 @@
     }
   };
 
+  /* ---------------- Attendance (Firestore) ---------------- */
+  // One document per Saturday, keyed by ISO date (e.g. "2026-09-05"):
+  // { cancelled: bool, players: { [playerId]: bool } }
+  var ATTENDANCE_COLLECTION = "attendance";
+  var SEASON_START = "2026-09-05";
+  var SEASON_WEEKS = 30; // adjust to extend/shorten the season shown
+
+  var attendanceCache = {};
+  var attendanceUnsubscribe = null;
+
+  function startAttendanceSync(){
+    attendanceUnsubscribe = onSnapshot(collection(fdb, ATTENDANCE_COLLECTION), function(snap){
+      var next = {};
+      snap.docs.forEach(function(d){ next[d.id] = d.data(); });
+      attendanceCache = next;
+      clearSyncError();
+      render();
+    }, function(err){
+      showSyncError("Couldn't sync attendance: " + err.message);
+    });
+  }
+
+  function stopAttendanceSync(){
+    if (attendanceUnsubscribe){ attendanceUnsubscribe(); attendanceUnsubscribe = null; }
+    attendanceCache = {};
+  }
+
+  function getSaturdays(){
+    var dates = [];
+    var d = new Date(SEASON_START + "T00:00:00");
+    for (var i = 0; i < SEASON_WEEKS; i++){
+      dates.push(d.toISOString().slice(0, 10));
+      d.setDate(d.getDate() + 7);
+    }
+    return dates;
+  }
+
+  var AttendanceStore = {
+    get: function(dateStr){ return attendanceCache[dateStr] || { cancelled: false, players: {} }; },
+    setCancelled: function(dateStr, cancelled){
+      return setDoc(doc(fdb, ATTENDANCE_COLLECTION, dateStr), { cancelled: cancelled }, { merge: true });
+    },
+    setPlayerPresent: function(dateStr, playerId, present){
+      var patch = {};
+      patch["players." + playerId] = present;
+      return setDoc(doc(fdb, ATTENDANCE_COLLECTION, dateStr), patch, { merge: true });
+    }
+  };
+
   /* ---------------- Field config ---------------- */
   var FIELDS = [
     { key: "childName", label: "Child's Name", type: "text", required: true, placeholder: "e.g. Jamie Smith" },
@@ -565,6 +664,7 @@
 
   /* ---------------- Rendering ---------------- */
   var viewsEl = document.getElementById("views");
+  var currentView = "players"; // players | attendance
   var searchTerm = "";
   var activeFilter = "all"; // all | detailsPending | notSignedUp | kitPending
   var expandedCards = {};
@@ -715,13 +815,55 @@
     return statsHtml + filtersHtml + '<div class="list results">' + cards + '</div>';
   }
 
-  function renderView(){
+  function renderPlayersView(){
     var toolbar = '<div class="toolbar">' +
       '<input class="search" type="search" placeholder="Search by player, parent, email or phone&hellip;" data-search value="' + escapeHtml(searchTerm) + '">' +
       '<button class="btn-export" data-export type="button">Export</button>' +
       '<button class="btn-primary" data-add>+ Add Player</button>' +
     '</div>';
     return toolbar + renderList();
+  }
+
+  function formatDateShort(iso){
+    var d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
+
+  function renderAttendanceView(){
+    var players = Store.list().slice().sort(function(a, b){ return (a.childName||"").localeCompare(b.childName||""); });
+    if (players.length === 0){
+      return '<div class="empty"><b>No players yet</b>Add players on the Players tab before taking attendance.</div>';
+    }
+
+    var dates = getSaturdays();
+    var headerCells = dates.map(function(dateStr){
+      var att = AttendanceStore.get(dateStr);
+      return '<th class="attendance-date-col' + (att.cancelled ? ' cancelled' : '') + '">' +
+        '<div class="attendance-date-label">' + formatDateShort(dateStr) + '</div>' +
+        '<label class="attendance-cancel"><input type="checkbox" data-cancel="' + dateStr + '"' + (att.cancelled ? ' checked' : '') + '> Cancelled</label>' +
+      '</th>';
+    }).join("");
+
+    var bodyRows = players.map(function(p){
+      var cells = dates.map(function(dateStr){
+        var att = AttendanceStore.get(dateStr);
+        var present = !!att.players[p.id];
+        return '<td class="attendance-date-col' + (att.cancelled ? ' cancelled' : '') + '">' +
+          '<input type="checkbox" class="attend-box" data-attend="' + dateStr + '" data-player="' + p.id + '"' +
+          (present ? ' checked' : '') + (att.cancelled ? ' disabled' : '') + '>' +
+        '</td>';
+      }).join("");
+      return '<tr><td class="attendance-player-col">' + escapeHtml(p.childName) + '</td>' + cells + '</tr>';
+    }).join("");
+
+    return '<div class="attendance-wrap"><table class="attendance-table">' +
+      '<thead><tr><th class="attendance-player-col">Player</th>' + headerCells + '</tr></thead>' +
+      '<tbody>' + bodyRows + '</tbody>' +
+    '</table></div>';
+  }
+
+  function renderView(){
+    return currentView === "attendance" ? renderAttendanceView() : renderPlayersView();
   }
 
   function render(){
@@ -864,6 +1006,37 @@
     if (searchEl){ searchEl.focus(); searchEl.setSelectionRange(cursor, cursor); }
   });
 
+  viewsEl.addEventListener("change", function(e){
+    var cancelInput = e.target.closest("[data-cancel]");
+    if (cancelInput){
+      var cancelDate = cancelInput.getAttribute("data-cancel");
+      AttendanceStore.setCancelled(cancelDate, cancelInput.checked).catch(function(err){ alert("Couldn't update: " + err.message); });
+      return;
+    }
+    var attendInput = e.target.closest("[data-attend]");
+    if (attendInput){
+      var attendDate = attendInput.getAttribute("data-attend");
+      var playerId = attendInput.getAttribute("data-player");
+      AttendanceStore.setPlayerPresent(attendDate, playerId, attendInput.checked).catch(function(err){ alert("Couldn't update: " + err.message); });
+      return;
+    }
+  });
+
+  /* ---------------- Tabs & year group ---------------- */
+  var pageTabs = document.getElementById("page-tabs");
+  pageTabs.addEventListener("click", function(e){
+    var tabBtn = e.target.closest("[data-view]");
+    if (!tabBtn) return;
+    currentView = tabBtn.getAttribute("data-view");
+    pageTabs.querySelectorAll(".tab").forEach(function(t){ t.classList.toggle("active", t === tabBtn); });
+    render();
+  });
+
+  var yearGroupSelect = document.getElementById("year-group-select");
+  yearGroupSelect.addEventListener("change", function(){
+    if (yearGroupSelect.value !== "P1") yearGroupSelect.value = "P1";
+  });
+
   /* ---------------- Help modal ---------------- */
   var HELP_SEEN_KEY = "microRugbyHelpSeen";
   var helpBackdrop = document.getElementById("help-modal-backdrop");
@@ -920,12 +1093,14 @@
       appEl.hidden = false;
       loginForm.reset();
       startSync();
+      startAttendanceSync();
       render();
       var seenHelp = false;
       try { seenHelp = !!localStorage.getItem(HELP_SEEN_KEY); } catch (e){}
       if (!seenHelp) openHelp();
     } else {
       stopSync();
+      stopAttendanceSync();
       appEl.hidden = true;
       loginScreen.hidden = false;
     }

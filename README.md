@@ -55,8 +55,18 @@ already active.
   spreadsheet (via the [ExcelJS](https://github.com/exceljs/exceljs) library,
   loaded from cdnjs, with a scarlet header row), regardless of the current
   search/filter.
-- The "Kit Not Ordered" filter matches the "Kit Ordered" toggle being off,
-  not whether a kit size or order date has been entered.
+- The "Kit Not Ordered" filter matches "Signed Up = yes" AND "Kit Ordered =
+  no" — a player who isn't signed up won't show under this filter even if
+  their kit hasn't been ordered, since kit shouldn't be ordered for them yet.
+- The dropdown under the title (P1/P2/P3/P4) is a placeholder for future
+  year groups — only P1 is selectable for now; P2–P4 are disabled options.
+- There are two tabs: **Players** (the contact log) and **Attendance** — a
+  grid of every player against each Saturday of the season (from
+  `SEASON_START`, for `SEASON_WEEKS` weeks — both adjustable near the top of
+  the `<script type="module">` block), stored in a separate `attendance`
+  Firestore collection (one document per date). Tick **Cancelled** at the
+  top of a date to block out a whole Saturday (e.g. a school holiday) —
+  that column's boxes grey out and lock.
 - Colours (black/red/gold) and the crest are a stylised approximation of
   Stirling County RFC's branding based on screenshots of
   stirlingcounty-rfc.co.uk — this environment couldn't reach that domain
