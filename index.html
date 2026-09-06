@@ -332,6 +332,9 @@
   .attendance-date-col.cancelled .attendance-date-label{text-decoration:line-through;color:var(--muted);}
   .attendance-table input[type="checkbox"].attend-box{width:18px;height:18px;accent-color:var(--good);cursor:pointer;}
   .attendance-table input[type="checkbox"].attend-box:disabled{opacity:.25;cursor:not-allowed;}
+  .attendance-table tfoot td{border-bottom:none;border-top:2px solid var(--panel-line);background:var(--panel-2);}
+  .attendance-table tfoot .attendance-player-col{background:var(--panel-2);font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:11px;letter-spacing:.03em;color:var(--muted);}
+  .attendance-total{font-weight:700;color:var(--accent);}
 
   /* Modal */
   .modal-backdrop{
@@ -629,11 +632,17 @@
     attendanceCache = {};
   }
 
+  function pad2(n){ return n < 10 ? "0" + n : "" + n; }
+
+  function toLocalIsoDate(d){
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
   function getSaturdays(){
     var dates = [];
     var d = new Date(SEASON_START + "T00:00:00");
     for (var i = 0; i < SEASON_WEEKS; i++){
-      dates.push(d.toISOString().slice(0, 10));
+      dates.push(toLocalIsoDate(d));
       d.setDate(d.getDate() + 7);
     }
     return dates;
@@ -856,9 +865,17 @@
       return '<tr><td class="attendance-player-col">' + escapeHtml(p.childName) + '</td>' + cells + '</tr>';
     }).join("");
 
+    var totalCells = dates.map(function(dateStr){
+      var att = AttendanceStore.get(dateStr);
+      if (att.cancelled) return '<td class="attendance-date-col cancelled">&mdash;</td>';
+      var present = players.filter(function(p){ return !!att.players[p.id]; }).length;
+      return '<td class="attendance-date-col attendance-total">' + present + '</td>';
+    }).join("");
+
     return '<div class="attendance-wrap"><table class="attendance-table">' +
       '<thead><tr><th class="attendance-player-col">Player</th>' + headerCells + '</tr></thead>' +
       '<tbody>' + bodyRows + '</tbody>' +
+      '<tfoot><tr><td class="attendance-player-col">Total</td>' + totalCells + '</tr></tfoot>' +
     '</table></div>';
   }
 
