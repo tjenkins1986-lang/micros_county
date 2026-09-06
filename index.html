@@ -525,7 +525,7 @@
           <li><b>Add a player</b> &mdash; tap <b>+ Add Player</b> and fill in their details.</li>
           <li><b>View, edit or delete a player</b> &mdash; double-tap anywhere on their card to expand it, then use Edit or Delete at the bottom.</li>
           <li><b>Search</b> &mdash; type a player's name, parent's name, email or phone number into the search box.</li>
-          <li><b>Filter</b> &mdash; use the chips (All / New Member Details Not Sent / Not Signed Up / Kit Not Ordered) to quickly find who needs following up.</li>
+          <li><b>Filter</b> &mdash; use the chips (Signed Up Only / All / New Member Details Not Sent / Not Signed Up / Kit Not Ordered) to quickly find who needs following up.</li>
           <li><b>Badges</b> &mdash; each card shows at a glance whether new-member details have been sent, whether they've signed up, and their social media permission.</li>
           <li><b>Export</b> &mdash; tap <b>Export</b> to download every player's details as a spreadsheet you can open in Excel.</li>
           <li><b>Attendance</b> &mdash; switch to the <b>Attendance</b> tab to tick off who's at training/matches each Saturday. Use <b>Signed Up Only</b> to hide players who haven't signed up yet. Tick <b>Cancelled</b> at the top of a date to block out a Saturday (e.g. school holidays) &mdash; that day's boxes are then locked. Tick as many boxes as you like, then press <b>Save Attendance</b> to store them &mdash; nothing is saved until you tap Save.</li>
@@ -718,6 +718,7 @@
   var searchTerm = "";
   var activeFilter = "all"; // all | detailsPending | notSignedUp | kitPending
   var expandedCards = {};
+  var playersSignedUpOnly = false;
   var attendanceSignedUpOnly = false;
 
   function escapeHtml(s){
@@ -797,7 +798,9 @@
 
   function renderList(){
     var all = Store.list();
-    var items = all.filter(function(i){ return matchesSearch(i, searchTerm) && matchesFilter(i, activeFilter); });
+    var items = all.filter(function(i){
+      return matchesSearch(i, searchTerm) && matchesFilter(i, activeFilter) && (!playersSignedUpOnly || i.signedUp);
+    });
     items.sort(function(a,b){ return (a.childName||"").localeCompare(b.childName||""); });
 
     var total = all.length;
@@ -812,6 +815,10 @@
       '</div>';
 
     var filtersHtml = '<div class="filters">' +
+      '<button class="filter-chip attendance-filter-btn' + (playersSignedUpOnly ? ' active' : '') + '" data-players-signedup-filter type="button" title="Show signed up players only">' +
+        '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7L3 4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>' +
+        'Signed Up Only' +
+      '</button>' +
       ['all','detailsPending','notSignedUp','kitPending'].map(function(f){
         var labels = { all: "All", detailsPending: "New Member Details Not Sent", notSignedUp: "Not Signed Up", kitPending: "Kit Not Ordered" };
         return '<button class="filter-chip' + (activeFilter === f ? ' active' : '') + '" data-filter="' + f + '">' + labels[f] + '</button>';
@@ -1063,6 +1070,12 @@
     var filterBtn = e.target.closest("[data-filter]");
     if (filterBtn){
       activeFilter = filterBtn.getAttribute("data-filter");
+      render();
+      return;
+    }
+
+    if (e.target.closest("[data-players-signedup-filter]")){
+      playersSignedUpOnly = !playersSignedUpOnly;
       render();
       return;
     }
