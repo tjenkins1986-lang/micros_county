@@ -372,6 +372,9 @@
   }
   .form-section-title:first-child{margin-top:0;padding-top:0;border-top:0;}
 
+  .form-section-disabled{opacity:.4;pointer-events:none;}
+  .form-section-hint{font-size:11.5px;color:var(--muted);font-style:italic;margin:-4px 0 12px;}
+
   .form-actions{display:flex;gap:8px;margin-top:18px;}
   .btn-secondary{
     flex:1;background:var(--panel);border:1px solid var(--panel-line);color:var(--text);
@@ -581,7 +584,7 @@
   function matchesFilter(item, filter){
     if (filter === "detailsPending") return !item.detailsSent;
     if (filter === "notSignedUp") return !item.signedUp;
-    if (filter === "kitPending") return !item.kitOrdered;
+    if (filter === "kitPending") return !!item.signedUp && !item.kitOrdered;
     return true;
   }
 
@@ -677,7 +680,7 @@
       if (item.phone) contactBits.push('<a href="tel:' + escapeHtml(item.phone) + '">' + escapeHtml(item.phone) + '</a>');
       var contactHtml = contactBits.length ? contactBits.join(" &middot; ") : '<span class="none">No contact details on file</span>';
 
-      var chips = '<span class="chip"><b>Kit Ordered</b>' + (item.kitOrdered ? "Yes" : "No") + '</span>';
+      var chips = "";
       if (item.kitSize) chips += '<span class="chip"><b>Kit Size</b>' + escapeHtml(item.kitSize) + '</span>';
       if (item.kitDateOrdered) chips += '<span class="chip"><b>Kit Order Date</b>' + escapeHtml(formatDate(item.kitDateOrdered)) + '</span>';
 
@@ -695,6 +698,7 @@
           '<span class="badge ' + (item.detailsSent ? 'yes">New Member Details Sent' : 'no">New Member Details Not Sent') + '</span>' +
           '<span class="badge ' + (item.signedUp ? 'yes">Signed Up' : 'no">Not Signed Up') + '</span>' +
           socialBadge(item) +
+          '<span class="badge ' + (item.kitOrdered ? 'yes">Kit Ordered' : 'no">Kit Not Ordered') + '</span>' +
         '</div>' +
         '<div class="card-body"' + (isExpanded ? '' : ' hidden') + '>' +
           '<div class="card-contact">' + contactHtml + '</div>' +
@@ -771,8 +775,11 @@
       toggleHtml("whatsappGroupAdded", "Added To WhatsApp Group", "Parent has been added to the team WhatsApp group", item ? !!item.whatsappGroupAdded : false);
 
     var kitSection = sectionTitleHtml("Kit Order") +
-      toggleHtml("kitOrdered", "Kit Ordered", "Kit has been ordered for this player", item ? !!item.kitOrdered : false) +
-      '<div class="field-row">' + fieldHtml(FIELDS[4], item ? item.kitSize : "") + fieldHtml(FIELDS[5], item ? item.kitDateOrdered : "") + '</div>';
+      '<div class="form-section-hint" id="kit-order-hint">Sign this player up first to enable kit ordering.</div>' +
+      '<div id="kit-order-fields">' +
+        toggleHtml("kitOrdered", "Kit Ordered", "Kit has been ordered for this player", item ? !!item.kitOrdered : false) +
+        '<div class="field-row">' + fieldHtml(FIELDS[4], item ? item.kitSize : "") + fieldHtml(FIELDS[5], item ? item.kitDateOrdered : "") + '</div>' +
+      '</div>';
 
     var commentsSection = sectionTitleHtml("Comments") + fieldHtml(FIELDS[6], item ? item.comments : "");
 
@@ -783,6 +790,19 @@
       '</div>';
 
     modalForm.querySelector("#cancel-btn").addEventListener("click", closeModal);
+
+    var signedUpInput = modalForm.querySelector('[name="signedUp"]');
+    var kitFieldsEl = modalForm.querySelector("#kit-order-fields");
+    var kitHintEl = modalForm.querySelector("#kit-order-hint");
+    function syncKitSectionState(){
+      var enabled = signedUpInput.checked;
+      kitFieldsEl.classList.toggle("form-section-disabled", !enabled);
+      kitHintEl.hidden = enabled;
+      kitFieldsEl.querySelectorAll("input").forEach(function(inp){ inp.disabled = !enabled; });
+    }
+    signedUpInput.addEventListener("change", syncKitSectionState);
+    syncKitSectionState();
+
     modalForm.onsubmit = function(e){
       e.preventDefault();
       var data = {};
