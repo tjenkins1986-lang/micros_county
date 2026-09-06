@@ -355,24 +355,22 @@
   .switch{position:relative;width:44px;height:26px;flex-shrink:0;}
   .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;}
   .switch .track{
-    position:absolute;inset:0;background:var(--panel-2);border:1px solid var(--panel-line);border-radius:20px;
+    position:absolute;inset:0;background:var(--danger-dim);border:1px solid rgba(193,85,46,.4);border-radius:20px;
     transition:background .15s ease, border-color .15s ease;
   }
   .switch .thumb{
     position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
-    background:var(--muted);transition:transform .15s ease, background .15s ease;
+    background:var(--danger);transition:transform .15s ease, background .15s ease;
   }
   .switch input:checked + .track{background:var(--good-dim);border-color:var(--good);}
   .switch input:checked + .track + .thumb{transform:translateX(18px);background:var(--good);}
 
-  .radio-group{display:flex;gap:8px;}
-  .radio-option{
-    flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
-    padding:9px 10px;background:var(--panel);border:1px solid var(--panel-line);border-radius:10px;
-    font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;
+  .form-section-title{
+    font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;
+    font-size:12px;font-weight:700;color:var(--accent);
+    margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--panel-line);
   }
-  .radio-option input{accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;}
-  .radio-option:has(input:checked){border-color:var(--accent);color:var(--text);background:var(--accent-dim);}
+  .form-section-title:first-child{margin-top:0;padding-top:0;border-top:0;}
 
   .form-actions{display:flex;gap:8px;margin-top:18px;}
   .btn-secondary{
@@ -477,7 +475,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
@@ -583,7 +581,7 @@
   function matchesFilter(item, filter){
     if (filter === "detailsPending") return !item.detailsSent;
     if (filter === "notSignedUp") return !item.signedUp;
-    if (filter === "kitPending") return !!item.signedUp && !item.kitDateOrdered;
+    if (filter === "kitPending") return !item.kitOrdered;
     return true;
   }
 
@@ -601,7 +599,7 @@
   }
 
   function exportXlsx(){
-    var headers = ["Year Group", "Child's Name", "Parent/Guardian", "Email", "Phone", "New Member Details Sent", "Signed Up", "Social Media Permission", "Kit Size", "Kit Date Ordered", "Comments"];
+    var headers = ["Year Group", "Child's Name", "Parent/Guardian", "Email", "Phone", "Social Media Permission", "Added To WhatsApp Group", "New Member Details Sent", "Signed Up", "Kit Size", "Kit Ordered", "Kit Date Ordered", "Comments"];
     var rows = Store.list().slice().sort(function(a, b){ return (a.childName||"").localeCompare(b.childName||""); }).map(function(item){
       return [
         YEAR_GROUP,
@@ -609,20 +607,38 @@
         item.parentName || "",
         item.email || "",
         item.phone || "",
+        item.socialMediaPermission === "yes" ? "Yes" : (item.socialMediaPermission === "no" ? "No" : ""),
+        item.whatsappGroupAdded ? "Yes" : "No",
         item.detailsSent ? "Yes" : "No",
         item.signedUp ? "Yes" : "No",
-        item.socialMediaPermission === "yes" ? "Yes" : (item.socialMediaPermission === "no" ? "No" : ""),
         item.kitSize || "",
+        item.kitOrdered ? "Yes" : "No",
         item.kitDateOrdered ? formatDate(item.kitDateOrdered) : "",
         item.comments || ""
       ];
     });
-    var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
-    ws["!cols"] = headers.map(function(){ return { wch: 20 }; });
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, YEAR_GROUP + " Contacts");
+
+    var wb = new ExcelJS.Workbook();
+    var ws = wb.addWorksheet(YEAR_GROUP + " Contacts");
+    ws.addRows([headers].concat(rows));
+    headers.forEach(function(_, i){ ws.getColumn(i + 1).width = 20; });
+    ws.getRow(1).eachCell(function(cell){
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFC8102E" } };
+      cell.font = { color: { argb: "FFFFFFFF" }, bold: true };
+    });
+
     var today = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, YEAR_GROUP + "-Micro-Rugby-Contacts-" + today + ".xlsx");
+    wb.xlsx.writeBuffer().then(function(buffer){
+      var blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = YEAR_GROUP + "-Micro-Rugby-Contacts-" + today + ".xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }).catch(function(err){ alert("Couldn't export: " + err.message); });
   }
 
   function renderList(){
@@ -661,9 +677,9 @@
       if (item.phone) contactBits.push('<a href="tel:' + escapeHtml(item.phone) + '">' + escapeHtml(item.phone) + '</a>');
       var contactHtml = contactBits.length ? contactBits.join(" &middot; ") : '<span class="none">No contact details on file</span>';
 
-      var chips = "";
+      var chips = '<span class="chip"><b>Kit Ordered</b>' + (item.kitOrdered ? "Yes" : "No") + '</span>';
       if (item.kitSize) chips += '<span class="chip"><b>Kit Size</b>' + escapeHtml(item.kitSize) + '</span>';
-      if (item.kitDateOrdered) chips += '<span class="chip"><b>Kit Ordered</b>' + escapeHtml(formatDate(item.kitDateOrdered)) + '</span>';
+      if (item.kitDateOrdered) chips += '<span class="chip"><b>Kit Order Date</b>' + escapeHtml(formatDate(item.kitDateOrdered)) + '</span>';
 
       var isExpanded = !!expandedCards[item.id];
 
@@ -733,29 +749,34 @@
     '</div>';
   }
 
-  function radioGroupHtml(key, label, value){
-    var options = [{ v: "yes", l: "Yes" }, { v: "no", l: "No" }];
-    var optionsHtml = options.map(function(o){
-      var checked = value === o.v ? " checked" : "";
-      return '<label class="radio-option"><input type="radio" name="' + key + '" value="' + o.v + '"' + checked + ' required>' + o.l + '</label>';
-    }).join("");
-    return '<div class="field"><label>' + label + '</label><div class="radio-group">' + optionsHtml + '</div></div>';
+  function sectionTitleHtml(title){
+    return '<div class="form-section-title">' + title + '</div>';
   }
 
   function openForm(id){
     var item = id ? Store.get(id) : null;
     modalTitle.textContent = item ? "Edit Player" : "Add Player";
 
-    var nameFields = fieldHtml(FIELDS[0], item ? item.childName : "") + fieldHtml(FIELDS[1], item ? item.parentName : "");
-    var contactFields = '<div class="field-row">' + fieldHtml(FIELDS[2], item ? item.email : "") + fieldHtml(FIELDS[3], item ? item.phone : "") + '</div>';
-    var toggles =
+    var playerSection = sectionTitleHtml("Player Details") +
+      fieldHtml(FIELDS[0], item ? item.childName : "") +
+      fieldHtml(FIELDS[1], item ? item.parentName : "");
+
+    var contactSection = sectionTitleHtml("Contact Details") +
+      '<div class="field-row">' + fieldHtml(FIELDS[2], item ? item.email : "") + fieldHtml(FIELDS[3], item ? item.phone : "") + '</div>' +
+      toggleHtml("socialMediaPermission", "Social Media Permission", "OK to feature this child in club photos/social posts", item ? item.socialMediaPermission === "yes" : false) +
+      toggleHtml("whatsappGroupAdded", "Added To WhatsApp Group", "Parent has been added to the team WhatsApp group", item ? !!item.whatsappGroupAdded : false);
+
+    var membershipSection = sectionTitleHtml("Membership") +
       toggleHtml("detailsSent", "New Member Details Sent", "Welcome pack / info emailed to parent", item ? !!item.detailsSent : false) +
       toggleHtml("signedUp", "Signed Up", "Registered as a club member", item ? !!item.signedUp : false);
-    var socialField = radioGroupHtml("socialMediaPermission", "Social Media Permission", item ? item.socialMediaPermission : "");
-    var kitFields = '<div class="field-row">' + fieldHtml(FIELDS[4], item ? item.kitSize : "") + fieldHtml(FIELDS[5], item ? item.kitDateOrdered : "") + '</div>';
-    var commentsField = fieldHtml(FIELDS[6], item ? item.comments : "");
 
-    modalForm.innerHTML = nameFields + contactFields + toggles + socialField + kitFields + commentsField +
+    var kitSection = sectionTitleHtml("Kit Order") +
+      '<div class="field-row">' + fieldHtml(FIELDS[4], item ? item.kitSize : "") + fieldHtml(FIELDS[5], item ? item.kitDateOrdered : "") + '</div>' +
+      toggleHtml("kitOrdered", "Kit Ordered", "Kit has been ordered for this player", item ? !!item.kitOrdered : false);
+
+    var commentsSection = sectionTitleHtml("Comments") + fieldHtml(FIELDS[6], item ? item.comments : "");
+
+    modalForm.innerHTML = playerSection + contactSection + membershipSection + kitSection + commentsSection +
       '<div class="form-actions">' +
         '<button type="button" class="btn-secondary" id="cancel-btn">Cancel</button>' +
         '<button type="submit" class="btn-submit">' + (item ? "Save Changes" : "Add Player") + '</button>' +
@@ -766,10 +787,11 @@
       e.preventDefault();
       var data = {};
       FIELDS.forEach(function(f){ data[f.key] = modalForm.querySelector('[name="' + f.key + '"]').value.trim(); });
+      data.socialMediaPermission = modalForm.querySelector('[name="socialMediaPermission"]').checked ? "yes" : "no";
+      data.whatsappGroupAdded = modalForm.querySelector('[name="whatsappGroupAdded"]').checked;
       data.detailsSent = modalForm.querySelector('[name="detailsSent"]').checked;
       data.signedUp = modalForm.querySelector('[name="signedUp"]').checked;
-      var socialInput = modalForm.querySelector('[name="socialMediaPermission"]:checked');
-      data.socialMediaPermission = socialInput ? socialInput.value : "";
+      data.kitOrdered = modalForm.querySelector('[name="kitOrdered"]').checked;
       if (!data.childName || !data.parentName){ return; }
       var savePromise = item ? Store.update(item.id, data) : Store.add(data);
       savePromise.catch(function(err){ alert("Couldn't save: " + err.message); });

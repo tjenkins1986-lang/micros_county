@@ -44,14 +44,19 @@ already active.
 - This app stores personal details about children and their parents/guardians.
   Only give logins to people who need access, and remove accounts (in
   Authentication → Users) when someone leaves a coaching/admin role.
-- "Signed Up" and "New Member Details Sent" are simple yes/no toggles in the
-  edit form; "Social Media Permission" is a required Yes/No radio choice.
+- The Add/Edit Player form is split into sections: Player Details, Contact
+  Details, Membership, Kit Order, and Comments. "New Member Details Sent",
+  "Signed Up", "Social Media Permission", "Added To WhatsApp Group", and
+  "Kit Ordered" are all yes/no toggles (pale green = yes, pale red = no).
 - Tap the **?** button in the header any time for a how-to popup (it also
   shows automatically the first time someone signs in, tracked via
   `localStorage` in that browser).
 - The **Export** button downloads every player's details as a `.xlsx`
-  spreadsheet (via the [SheetJS](https://sheetjs.com/) library, loaded from
-  cdnjs), regardless of the current search/filter.
+  spreadsheet (via the [ExcelJS](https://github.com/exceljs/exceljs) library,
+  loaded from cdnjs, with a scarlet header row), regardless of the current
+  search/filter.
+- The "Kit Not Ordered" filter matches the "Kit Ordered" toggle being off,
+  not whether a kit size or order date has been entered.
 - Colours (black/red/gold) and the crest are a stylised approximation of
   Stirling County RFC's branding based on screenshots of
   stirlingcounty-rfc.co.uk — this environment couldn't reach that domain
