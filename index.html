@@ -649,7 +649,10 @@
   }
 
   var AttendanceStore = {
-    get: function(dateStr){ return attendanceCache[dateStr] || { cancelled: false, players: {} }; },
+    get: function(dateStr){
+      var rec = attendanceCache[dateStr] || {};
+      return { cancelled: !!rec.cancelled, players: rec.players || {} };
+    },
     setCancelled: function(dateStr, cancelled){
       return setDoc(doc(fdb, ATTENDANCE_COLLECTION, dateStr), { cancelled: cancelled }, { merge: true });
     },
