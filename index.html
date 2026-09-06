@@ -761,22 +761,22 @@
       fieldHtml(FIELDS[0], item ? item.childName : "") +
       fieldHtml(FIELDS[1], item ? item.parentName : "");
 
-    var contactSection = sectionTitleHtml("Contact Details") +
-      '<div class="field-row">' + fieldHtml(FIELDS[2], item ? item.email : "") + fieldHtml(FIELDS[3], item ? item.phone : "") + '</div>' +
-      toggleHtml("socialMediaPermission", "Social Media Permission", "OK to feature this child in club photos/social posts", item ? item.socialMediaPermission === "yes" : false) +
-      toggleHtml("whatsappGroupAdded", "Added To WhatsApp Group", "Parent has been added to the team WhatsApp group", item ? !!item.whatsappGroupAdded : false);
-
     var membershipSection = sectionTitleHtml("Membership") +
       toggleHtml("detailsSent", "New Member Details Sent", "Welcome pack / info emailed to parent", item ? !!item.detailsSent : false) +
       toggleHtml("signedUp", "Signed Up", "Registered as a club member", item ? !!item.signedUp : false);
 
+    var contactSection = sectionTitleHtml("Contact Details &amp; Social Media Permission") +
+      '<div class="field-row">' + fieldHtml(FIELDS[2], item ? item.email : "") + fieldHtml(FIELDS[3], item ? item.phone : "") + '</div>' +
+      toggleHtml("socialMediaPermission", "Social Media Permission", "OK to feature this child in club photos/social posts", item ? item.socialMediaPermission === "yes" : false) +
+      toggleHtml("whatsappGroupAdded", "Added To WhatsApp Group", "Parent has been added to the team WhatsApp group", item ? !!item.whatsappGroupAdded : false);
+
     var kitSection = sectionTitleHtml("Kit Order") +
-      '<div class="field-row">' + fieldHtml(FIELDS[4], item ? item.kitSize : "") + fieldHtml(FIELDS[5], item ? item.kitDateOrdered : "") + '</div>' +
-      toggleHtml("kitOrdered", "Kit Ordered", "Kit has been ordered for this player", item ? !!item.kitOrdered : false);
+      toggleHtml("kitOrdered", "Kit Ordered", "Kit has been ordered for this player", item ? !!item.kitOrdered : false) +
+      '<div class="field-row">' + fieldHtml(FIELDS[4], item ? item.kitSize : "") + fieldHtml(FIELDS[5], item ? item.kitDateOrdered : "") + '</div>';
 
     var commentsSection = sectionTitleHtml("Comments") + fieldHtml(FIELDS[6], item ? item.comments : "");
 
-    modalForm.innerHTML = playerSection + contactSection + membershipSection + kitSection + commentsSection +
+    modalForm.innerHTML = playerSection + membershipSection + contactSection + kitSection + commentsSection +
       '<div class="form-actions">' +
         '<button type="button" class="btn-secondary" id="cancel-btn">Cancel</button>' +
         '<button type="submit" class="btn-submit">' + (item ? "Save Changes" : "Add Player") + '</button>' +
